@@ -8,10 +8,41 @@
   :root {
     color-scheme: light;
     font-family: "Segoe UI", system-ui, sans-serif;
+    --bg: #f6f7f8;
     --panel-bg: rgba(255, 255, 255, 0.9);
     --panel-border: rgba(0,0,0,0.1);
     --text-color: #222;
     --accent: #0077ff;
+    --hud-shadow: rgba(0,0,0,0.15);
+    --station-fill: #fff;
+    --station-stroke: #333;
+    --station-overflow: #ff3b30;
+    --passenger-color: #333;
+    --train-fill: #fff;
+    --train-stroke: #111;
+    --river-base: #98c1ff;
+    --river-highlight: rgba(255,255,255,0.6);
+    --alert-bg: rgba(255,255,255,0.95);
+    --alert-color: #222;
+  }
+  body[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --panel-bg: rgba(24, 26, 32, 0.88);
+    --panel-border: rgba(255,255,255,0.08);
+    --text-color: #e7ecf2;
+    --accent: #5aa8ff;
+    --hud-shadow: rgba(0,0,0,0.45);
+    --station-fill: #1a1d24;
+    --station-stroke: #e7ecf2;
+    --station-overflow: #ff6b6b;
+    --passenger-color: #e7ecf2;
+    --train-fill: #1d212a;
+    --train-stroke: #f5f7fa;
+    --river-base: #1a4d7a;
+    --river-highlight: rgba(90,168,255,0.6);
+    --alert-bg: rgba(16,18,24,0.92);
+    --alert-color: #f2f5fb;
   }
   * {
     box-sizing: border-box;
@@ -22,7 +53,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #f6f7f8;
+    background: var(--bg);
     color: var(--text-color);
   }
   canvas {
@@ -32,11 +63,13 @@
     height: 100%;
     touch-action: none;
     cursor: crosshair;
+    z-index: 0;
   }
   .overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
+    z-index: 1;
   }
   .hud {
     position: absolute;
@@ -46,6 +79,7 @@
     background: var(--panel-bg);
     border-radius: 10px;
     border: 1px solid var(--panel-border);
+    box-shadow: 0 12px 24px var(--hud-shadow);
     pointer-events: auto;
     display: flex;
     flex-direction: column;
@@ -77,8 +111,9 @@
     font: inherit;
     padding: 8px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.15);
-    background: rgba(255,255,255,0.95);
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    color: var(--text-color);
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
   }
@@ -131,12 +166,13 @@
     display: flex;
   }
   .modal {
-    background: white;
+    background: var(--panel-bg);
     padding: 24px 32px;
     border-radius: 16px;
     min-width: 280px;
     text-align: center;
-    box-shadow: 0 24px 48px rgba(0,0,0,0.25);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+    border: 1px solid var(--panel-border);
   }
   .modal h2 {
     margin-top: 0;
@@ -151,6 +187,7 @@
     padding: 10px 14px;
     pointer-events: auto;
     min-width: 200px;
+    box-shadow: 0 12px 24px var(--hud-shadow);
   }
   .assign-panel h3 {
     margin: 0 0 8px 0;
@@ -194,7 +231,7 @@
   .help-overlay {
     position: absolute;
     inset: 10% 15%;
-    background: rgba(255,255,255,0.96);
+    background: var(--panel-bg);
     border-radius: 20px;
     border: 1px solid var(--panel-border);
     padding: 24px;
@@ -203,6 +240,105 @@
     pointer-events: auto;
   }
   .help-overlay.active {
+    display: block;
+  }
+  .mode-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 12, 20, 0.55);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.2s ease;
+    opacity: 0;
+  }
+  .mode-overlay.active {
+    display: flex;
+    pointer-events: auto;
+    opacity: 1;
+  }
+  .mode-dialog {
+    background: var(--panel-bg);
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    padding: 28px 32px;
+    max-width: 560px;
+    width: calc(100% - 64px);
+    box-shadow: 0 28px 64px rgba(0,0,0,0.35);
+    text-align: center;
+    color: var(--text-color);
+  }
+  .mode-dialog h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+  .mode-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+    justify-content: center;
+  }
+  .mode-card {
+    flex: 1 1 160px;
+    min-width: 160px;
+    border-radius: 18px;
+    padding: 18px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, border 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    color: inherit;
+  }
+  .mode-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px var(--hud-shadow);
+  }
+  .mode-card.current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0), 0 14px 32px var(--hud-shadow);
+  }
+  .mode-card h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .mode-card span {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.75;
+    line-height: 1.4;
+  }
+  .mode-note {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 16px;
+  }
+  .alert-banner {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--alert-bg);
+    color: var(--alert-color);
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 18px 36px var(--hud-shadow);
+    display: none;
+    pointer-events: none;
+    z-index: 4;
+    font-size: 13px;
+    letter-spacing: 0.35px;
+  }
+  .alert-banner.active {
     display: block;
   }
   .debug-panel {
@@ -265,6 +401,7 @@
       <button id="modalPrimary">OK</button>
     </div>
   </div>
+  <div class="alert-banner" id="alertBanner"></div>
   <div class="tooltip" id="tooltip"></div>
   <button class="help-toggle" id="helpToggle">?</button>
   <div class="help-overlay" id="helpOverlay">
@@ -274,12 +411,34 @@
       <li>Passengers wait at stations; deliver them before stations overcrowd.</li>
       <li>Lines crossing the river consume tunnels. If you run out of tunnels you cannot cross until you earn more.</li>
       <li>Every in-game week you may choose an upgrade. Pause with Space, adjust speed with +/-.</li>
-      <li>Toggle colorblind mode and audio in Settings.</li>
+      <li>Pick Sandbox/Easy, Medium, or Hard before you begin a run.</li>
+      <li>Toggle colorblind mode, audio, and dark mode in Settings.</li>
       <li>Press D to show debug stats.</li>
     </ul>
     <button id="closeHelp">Close</button>
   </div>
   <div class="debug-panel" id="debugPanel"></div>
+  <div class="mode-overlay" id="modeOverlay">
+    <div class="mode-dialog">
+      <h2>Choose Mode</h2>
+      <p>Select how intense your week should be.</p>
+      <div class="mode-cards">
+        <button type="button" class="mode-card" data-mode="easy">
+          <h3>Sandbox / Easy</h3>
+          <span>Infinite locomotives and carriages, relaxed spawning, and no game over—stations warn and slow time.</span>
+        </button>
+        <button type="button" class="mode-card" data-mode="medium">
+          <h3>Medium</h3>
+          <span>Balanced challenge with standard inventories, spawn rates, and overcrowding rules.</span>
+        </button>
+        <button type="button" class="mode-card" data-mode="hard">
+          <h3>Hard</h3>
+          <span>Scarce resources, quicker growth, and strict overcrowding—plan ahead and react fast.</span>
+        </button>
+      </div>
+      <div class="mode-note">Modes apply to new runs. Restart to switch difficulties.</div>
+    </div>
+  </div>
 </div>
 <script>
 (() => {
@@ -289,6 +448,16 @@
   const clamp = (v, min, max) => v < min ? min : v > max ? max : v;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const lerp = (a, b, t) => a + (b - a) * t;
+  const distanceToSegment = (p, a, b) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq === 0) return distance(p, a);
+    let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSq;
+    t = clamp(t, 0, 1);
+    const proj = { x: a.x + dx * t, y: a.y + dy * t };
+    return distance(p, proj);
+  };
 
   let NEXT_ID = 1;
   const uid = prefix => `${prefix}-${NEXT_ID++}`;
@@ -300,6 +469,55 @@
   const COLORBLIND_COLORS = [
     "#0072b2", "#d55e00", "#009e73", "#cc79a7", "#f0e442", "#56b4e9", "#e69f00", "#000000"
   ];
+  const SAVE_SCHEMA_VERSION = 2;
+  const BASE_CAPACITY = 8;
+  const INTERCHANGE_BONUS = 4;
+  const BASE_GRACE_SECONDS = 10;
+  const DEFAULT_SETTINGS = { colorblind: false, audio: true, dark: false };
+  const MODES = {
+    easy: {
+      name: 'Sandbox',
+      key: 'easy',
+      infiniteCarriages: true,
+      infiniteLocos: true,
+      start: { lines: 3, locos: Infinity, carriages: Infinity, tunnels: 4, interchanges: 1 },
+      spawnMul: 0.75,
+      overcrowdCapDelta: 4,
+      overcrowdGrace: 15,
+      gameOver: false,
+      weeklyChoices: 3,
+      rareShapeOffset: 2,
+      trainSpeedMul: 0.95
+    },
+    medium: {
+      name: 'Medium',
+      key: 'medium',
+      infiniteCarriages: false,
+      infiniteLocos: false,
+      start: { lines: 2, locos: 2, carriages: 1, tunnels: 2, interchanges: 1 },
+      spawnMul: 1.0,
+      overcrowdCapDelta: 0,
+      overcrowdGrace: 0,
+      gameOver: true,
+      weeklyChoices: 3,
+      rareShapeOffset: 0,
+      trainSpeedMul: 1
+    },
+    hard: {
+      name: 'Hard',
+      key: 'hard',
+      infiniteCarriages: false,
+      infiniteLocos: false,
+      start: { lines: 1, locos: 1, carriages: 0, tunnels: 1, interchanges: 0 },
+      spawnMul: 1.3,
+      overcrowdCapDelta: -1,
+      overcrowdGrace: -6,
+      gameOver: true,
+      weeklyChoices: 2,
+      rareShapeOffset: -2,
+      trainSpeedMul: 1.15
+    }
+  };
 
   /**
    * Simple seeded PRNG for deterministic weekly upgrade choices.
@@ -335,12 +553,17 @@
       this.shapeType = shapeType;
       this.isInterchange = false;
       this.queue = [];
-      this.capacityVisible = 6;
+      this.capacityBase = BASE_CAPACITY;
+      this.capacityInterchange = BASE_CAPACITY + INTERCHANGE_BONUS;
+      this.capacityVisible = this.getCapacity();
       this.overcrowdTimer = 0;
       this.lastRouteVersion = 0;
+      this.warningActive = false;
     }
     getCapacity() {
-      return this.isInterchange ? 12 : 8;
+      const base = this.capacityBase ?? BASE_CAPACITY;
+      const interchange = this.capacityInterchange ?? (base + INTERCHANGE_BONUS);
+      return this.isInterchange ? interchange : base;
     }
     enqueue(passenger) {
       this.queue.push(passenger);
@@ -373,7 +596,7 @@
   }
 
   class Train {
-    constructor(lineId) {
+    constructor(lineId, speedMul = 1) {
       this.id = uid('tr');
       this.lineId = lineId;
       this.currentStationIndex = 0;
@@ -383,13 +606,13 @@
       this.capacity = 6;
       this.passengers = [];
       this.dwellTimer = 1.2;
-      this.speed = 60; // px per second
+      this.speed = 60 * speedMul; // px per second
       this.justSpawned = true;
     }
   }
 
   class GameState {
-    constructor() {
+    constructor(modeKey = 'medium', params = MODES[modeKey] || MODES.medium) {
       this.time = 0;
       this.score = 0;
       this.week = 1;
@@ -397,11 +620,11 @@
       this.upgradesAvailable = [];
       this.riverShape = [];
       this.inventory = {
-        linesLeft: 2,
-        locomotives: 1,
-        carriages: 1,
-        tunnels: 1,
-        interchanges: 0
+        linesLeft: params.start.lines ?? 0,
+        locomotives: params.start.locos ?? 0,
+        carriages: params.start.carriages ?? 0,
+        tunnels: params.start.tunnels ?? 0,
+        interchanges: params.start.interchanges ?? 0
       };
       this.lines = [];
       this.stations = [];
@@ -412,6 +635,8 @@
       this.colorblind = false;
       this.audio = true;
       this.bestScore = Number(localStorage.getItem('subwayPlannerBest') || '0');
+      this.modeKey = params.key || modeKey;
+      this.saveSchemaVersion = SAVE_SCHEMA_VERSION;
     }
   }
 
@@ -444,28 +669,36 @@
     constructor(canvas) {
       this.canvas = canvas;
       this.ctx = canvas.getContext('2d');
-      this.state = new GameState();
+      this.modeKey = 'medium';
+      this.mode = MODES[this.modeKey];
+      this.settings = { ...DEFAULT_SETTINGS };
+      this.audio = new AudioManager();
+      this.setMode(this.modeKey);
+      this.state = new GameState(this.modeKey, this.mode);
+      this.bestScore = Number(localStorage.getItem('subwayPlannerBest') || '0');
+      this.state.bestScore = this.bestScore;
       this.stations = new Map();
       this.lines = new Map();
       this.trains = new Map();
       this.passengers = new Set();
       this.running = true;
       this.speed = 1;
-      this.pointerState = {
-        down: false,
-        start: null,
-        current: null,
-        lineId: null,
-        stationStart: null,
-        stationHover: null,
-        creating: false,
-        extendDir: 'end'
-      };
+      this.pointerState = this.createPointerState();
       this.hoverStation = null;
       this.selectedLineId = null;
       this.lastSpawnStation = 0;
       this.lastSpawnPassenger = 0;
       this.weeklyTimer = 0;
+      this.saveTimer = 0;
+      this.routeCache = new Map();
+      this.routeCacheVersion = -1;
+      this.rng = new RNG();
+      this.debugEnabled = false;
+      this.fps = 0;
+      this.pendingMode = false;
+      this.alertTimer = null;
+      this.theme = {};
+      this.colorPalette = [...BASE_COLORS];
       this.overlays = {
         hudScore: document.getElementById('score'),
         hudClock: document.getElementById('clock'),
@@ -479,29 +712,168 @@
         modalPrimary: document.getElementById('modalPrimary'),
         lineList: document.getElementById('lineList'),
         debugPanel: document.getElementById('debugPanel'),
-        helpOverlay: document.getElementById('helpOverlay')
+        helpOverlay: document.getElementById('helpOverlay'),
+        alert: document.getElementById('alertBanner'),
+        modeOverlay: document.getElementById('modeOverlay'),
+        pauseBtn: document.getElementById('pauseBtn'),
+        speedBtn: document.getElementById('speedBtn')
       };
-      this.colorPalette = [...BASE_COLORS];
-      this.rng = new RNG();
-      this.debugEnabled = false;
-      this.audio = new AudioManager();
-      this.bestScore = this.state.bestScore;
-      this.routeCache = new Map();
-      this.routeCacheVersion = -1;
-      this.fps = 0;
-      this.restoreFromSave();
+      this.modeCards = Array.from(this.overlays.modeOverlay.querySelectorAll('.mode-card'));
+      this.loadSettings();
+      this.state.colorblind = this.settings.colorblind;
+      this.state.audio = this.settings.audio;
+      this.applyPalette();
+      this.applyTheme();
       this.setupCanvas();
       this.setupUI();
-      this.generateRiver();
-      if (this.stations.size === 0) {
-        this.spawnInitialStations();
-      }
-      if (this.lines.size === 0) {
-        this.ensureInitialTrain();
+      const restored = this.restoreFromSave();
+      if (!restored) {
+        this.generateRiver();
+        this.startModeSelection();
+      } else {
+        this.generateRiver();
+        this.lines.forEach(line => line.recomputeGeometry(this.stations));
+        this.refreshLineList();
       }
       this.lastTimestamp = performance.now();
       this.accumulator = 0;
       requestAnimationFrame(this.loop.bind(this));
+    }
+
+    createPointerState() {
+      return {
+        down: false,
+        start: null,
+        current: null,
+        lineId: null,
+        stationStart: null,
+        stationHover: null,
+        creating: false,
+        extendDir: 'end',
+        pendingNewLine: false,
+        action: null,
+        segmentHover: null
+      };
+    }
+
+    setMode(modeKey) {
+      const selected = MODES[modeKey] || MODES.medium;
+      this.modeKey = selected.key || modeKey || 'medium';
+      this.mode = selected;
+      this.capacityBase = Math.max(4, BASE_CAPACITY + (selected.overcrowdCapDelta || 0));
+      this.capacityInterchange = this.capacityBase + INTERCHANGE_BONUS;
+      this.overcrowdGrace = Math.max(4, BASE_GRACE_SECONDS + (selected.overcrowdGrace || 0));
+      this.spawnMultiplier = selected.spawnMul || 1;
+      this.weeklyChoiceCount = selected.weeklyChoices || 3;
+    }
+
+    loadSettings() {
+      try {
+        const stored = JSON.parse(localStorage.getItem('subwayPlannerSettings') || '{}');
+        if (stored && typeof stored === 'object') {
+          this.settings.colorblind = !!stored.colorblind;
+          this.settings.audio = stored.audio !== false;
+          this.settings.dark = !!stored.dark;
+        }
+      } catch (err) {
+        console.warn('Failed to load settings', err);
+      }
+      this.audio.enabled = this.settings.audio;
+    }
+
+    persistSettings() {
+      try {
+        localStorage.setItem('subwayPlannerSettings', JSON.stringify({
+          colorblind: this.settings.colorblind,
+          audio: this.settings.audio,
+          dark: this.settings.dark
+        }));
+      } catch (err) {
+        console.warn('Failed to save settings', err);
+      }
+    }
+
+    clearAutosave() {
+      try {
+        localStorage.removeItem('subwayPlannerAutosave');
+      } catch (err) {
+        console.warn('Failed to clear autosave', err);
+      }
+    }
+
+    applyTheme() {
+      document.body.dataset.theme = this.settings.dark ? 'dark' : 'light';
+      this.updateThemeColors();
+    }
+
+    updateThemeColors() {
+      const styles = getComputedStyle(document.body);
+      const read = key => styles.getPropertyValue(key).trim() || '#ffffff';
+      this.theme = {
+        stationFill: read('--station-fill'),
+        stationStroke: read('--station-stroke'),
+        stationOverflow: read('--station-overflow'),
+        passengerColor: read('--passenger-color'),
+        trainFill: read('--train-fill'),
+        trainStroke: read('--train-stroke'),
+        riverBase: read('--river-base'),
+        riverHighlight: read('--river-highlight')
+      };
+    }
+
+    startModeSelection() {
+      this.pendingMode = true;
+      this.togglePause(false);
+      this.highlightModeCard(this.modeKey);
+      this.overlays.modeOverlay.classList.add('active');
+    }
+
+    highlightModeCard(modeKey) {
+      if (!this.modeCards) return;
+      this.modeCards.forEach(card => card.classList.toggle('current', card.dataset.mode === modeKey));
+    }
+
+    beginNewRun(modeKey) {
+      this.overlays.modeOverlay.classList.remove('active');
+      this.pendingMode = false;
+      this.highlightModeCard(modeKey);
+      this.reset(modeKey);
+    }
+
+    startNewRun(modeKey) {
+      this.setMode(modeKey || this.modeKey);
+      this.state = new GameState(this.modeKey, this.mode);
+      this.state.colorblind = this.settings.colorblind;
+      this.state.audio = this.settings.audio;
+      this.state.bestScore = this.bestScore;
+      this.stations.clear();
+      this.lines.clear();
+      this.trains.clear();
+      this.passengers.clear();
+      this.pointerState = this.createPointerState();
+      this.selectedLineId = null;
+      this.hoverStation = null;
+      this.lastSpawnStation = 0;
+      this.lastSpawnPassenger = 0;
+      this.weeklyTimer = 0;
+      this.saveTimer = 0;
+      this.state.week = 1;
+      this.state.daySeconds = 0;
+      this.routeCache.clear();
+      this.routeCacheVersion = -1;
+      this.clearAlert();
+      this.generateRiver();
+      this.spawnInitialStations();
+      this.ensureStarterLine();
+      this.refreshLineList();
+      this.speed = 1;
+      this.togglePause(true);
+      this.updateSpeedButton();
+      this.saveState();
+    }
+
+    reset(modeKey) {
+      this.startNewRun(modeKey || this.modeKey);
     }
 
     setupCanvas() {
@@ -517,9 +889,10 @@
     }
 
     setupUI() {
-      const pauseBtn = document.getElementById('pauseBtn');
+      const pauseBtn = this.overlays.pauseBtn;
+      const speedBtn = this.overlays.speedBtn;
       pauseBtn.addEventListener('click', () => this.togglePause());
-      document.getElementById('speedBtn').addEventListener('click', () => this.toggleSpeed());
+      speedBtn.addEventListener('click', () => this.toggleSpeed());
       document.getElementById('undoBtn').addEventListener('click', () => this.undoSegment());
       document.getElementById('deleteBtn').addEventListener('click', () => this.deleteSelectedLine());
       document.getElementById('restartBtn').addEventListener('click', () => this.confirmRestart());
@@ -528,24 +901,109 @@
       document.getElementById('helpToggle').addEventListener('click', () => this.toggleHelp());
       document.getElementById('closeHelp').addEventListener('click', () => this.toggleHelp(false));
 
+      if (this.modeCards) {
+        this.modeCards.forEach(card => {
+          card.addEventListener('click', () => this.beginNewRun(card.dataset.mode));
+        });
+      }
+
       this.canvas.addEventListener('pointerdown', e => this.onPointerDown(e));
       this.canvas.addEventListener('pointermove', e => this.onPointerMove(e));
       this.canvas.addEventListener('pointerup', e => this.onPointerUp(e));
       this.canvas.addEventListener('pointercancel', e => this.onPointerUp(e));
 
       window.addEventListener('keydown', e => this.onKeyDown(e));
+      this.updatePauseButton();
+      this.updateSpeedButton();
     }
 
     togglePause(force) {
       this.running = force !== undefined ? force : !this.running;
-      document.getElementById('pauseBtn').textContent = this.running ? 'Pause' : 'Play';
+      this.updatePauseButton();
     }
 
     toggleSpeed() {
       const speeds = [1, 2, 4];
       const idx = (speeds.indexOf(this.speed) + 1) % speeds.length;
       this.speed = speeds[idx];
-      document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`;
+      this.updateSpeedButton();
+    }
+
+    updatePauseButton() {
+      if (this.overlays.pauseBtn) {
+        this.overlays.pauseBtn.textContent = this.running ? 'Pause' : 'Play';
+      }
+    }
+
+    updateSpeedButton() {
+      if (this.overlays.speedBtn) {
+        this.overlays.speedBtn.textContent = `Speed ${this.speed}x`;
+      }
+    }
+
+    hasInventory(key) {
+      const value = this.state.inventory[key] ?? 0;
+      return !isFinite(value) || value > 0;
+    }
+
+    spendInventory(key, amount = 1) {
+      const value = this.state.inventory[key] ?? 0;
+      if (!isFinite(value)) return true;
+      if (value >= amount) {
+        this.state.inventory[key] = value - amount;
+        return true;
+      }
+      return false;
+    }
+
+    addInventory(key, amount = 1) {
+      const value = this.state.inventory[key] ?? 0;
+      if (!isFinite(value)) return;
+      this.state.inventory[key] = Math.max(0, value + amount);
+    }
+
+    formatInventoryValue(value) {
+      return !isFinite(value) ? '∞' : value;
+    }
+
+    serializeInventory(source) {
+      const result = {};
+      Object.entries(source || {}).forEach(([key, value]) => {
+        result[key] = !isFinite(value) ? 'inf' : value;
+      });
+      return result;
+    }
+
+    deserializeInventory(raw, base = {}) {
+      const inventory = { ...base };
+      Object.entries(raw || {}).forEach(([key, value]) => {
+        if (value === 'inf' || value === Infinity) {
+          inventory[key] = Infinity;
+        } else if (typeof value === 'number' && Number.isFinite(value)) {
+          inventory[key] = value;
+        } else if (typeof value === 'string' && value !== '') {
+          const parsed = Number(value);
+          if (Number.isFinite(parsed)) inventory[key] = parsed;
+        }
+      });
+      return inventory;
+    }
+
+    showAlert(message) {
+      const banner = this.overlays.alert;
+      if (!banner) return;
+      banner.textContent = message;
+      banner.classList.add('active');
+      clearTimeout(this.alertTimer);
+      this.alertTimer = setTimeout(() => banner.classList.remove('active'), 2500);
+    }
+
+    clearAlert() {
+      const banner = this.overlays.alert;
+      if (!banner) return;
+      banner.classList.remove('active');
+      if (this.alertTimer) clearTimeout(this.alertTimer);
+      this.alertTimer = null;
     }
 
     undoSegment() {
@@ -556,10 +1014,8 @@
       line.recomputeGeometry(this.stations);
       const after = this.countTunnelsForIds(line.stations);
       const refund = Math.max(0, before - after);
-      if (refund) {
-        this.state.inventory.tunnels += refund;
-        line.tunnels = after;
-      }
+      if (refund) this.addInventory('tunnels', refund);
+      line.tunnels = after;
       this.state.routeVersion++;
       this.refreshLineList();
     }
@@ -568,8 +1024,8 @@
       if (!this.selectedLineId) return;
       const line = this.lines.get(this.selectedLineId);
       if (!line) return;
-      this.state.inventory.linesLeft++;
-      this.state.inventory.tunnels += line.tunnels;
+      this.addInventory('linesLeft', 1);
+      this.addInventory('tunnels', line.tunnels);
       line.trains.forEach(trId => {
         const tr = this.trains.get(trId);
         if (tr) {
@@ -579,7 +1035,7 @@
             tr.passengers.forEach(psg => station.enqueue(psg));
             station.capacityVisible = Math.max(station.capacityVisible, station.queue.length);
           }
-          this.state.inventory.locomotives++;
+          this.addInventory('locomotives', 1);
           this.trains.delete(trId);
         }
       });
@@ -587,12 +1043,15 @@
       this.selectedLineId = null;
       this.state.routeVersion++;
       this.refreshLineList();
+      this.saveTimer = 0;
+      this.saveState();
     }
 
     confirmRestart() {
       this.showModal('Restart game?', 'Your current progress will be lost. Continue?', () => {
         this.hideModal();
-        this.reset();
+        this.clearAutosave();
+        this.startModeSelection();
       });
     }
 
@@ -600,19 +1059,28 @@
       const body = document.createElement('div');
       body.innerHTML = `
         <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;">
-          <input type="checkbox" id="cbColorblind" ${this.state.colorblind ? 'checked' : ''}/> Colorblind palette
+          <input type="checkbox" id="cbColorblind" ${this.settings.colorblind ? 'checked' : ''}/> Colorblind palette
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;">
+          <input type="checkbox" id="cbDark" ${this.settings.dark ? 'checked' : ''}/> Dark mode
         </label>
         <label style="display:flex;align-items:center;gap:8px;justify-content:center;">
-          <input type="checkbox" id="cbAudio" ${this.audio.enabled ? 'checked' : ''}/> Audio ding
+          <input type="checkbox" id="cbAudio" ${this.settings.audio ? 'checked' : ''}/> Audio ding
         </label>
       `;
       this.showModal('Settings', body, () => {
         const colorblind = body.querySelector('#cbColorblind').checked;
+        const dark = body.querySelector('#cbDark').checked;
         const audio = body.querySelector('#cbAudio').checked;
+        this.settings.colorblind = colorblind;
+        this.settings.dark = dark;
+        this.settings.audio = audio;
         this.state.colorblind = colorblind;
         this.audio.enabled = audio;
-        localStorage.setItem('subwayPlannerSettings', JSON.stringify({ colorblind, audio }));
+        this.state.audio = audio;
         this.applyPalette();
+        this.applyTheme();
+        this.persistSettings();
         this.hideModal();
       });
     }
@@ -649,8 +1117,8 @@
       switch (e.key) {
         case ' ': e.preventDefault(); this.togglePause(); break;
         case 'r': case 'R': this.confirmRestart(); break;
-        case '+': case '=': this.speed = Math.min(4, this.speed * 2); document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`; break;
-        case '-': case '_': this.speed = Math.max(1, this.speed / 2); document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`; break;
+        case '+': case '=': this.speed = Math.min(4, this.speed * 2); this.updateSpeedButton(); break;
+        case '-': case '_': this.speed = Math.max(1, this.speed / 2); this.updateSpeedButton(); break;
         case 'z': case 'Z': this.undoSegment(); break;
         case 'd': case 'D': this.debugEnabled = !this.debugEnabled; break;
         case '?': this.toggleHelp(); break;
@@ -658,97 +1126,117 @@
     }
 
     applyPalette() {
-      this.colorPalette = this.state.colorblind ? [...COLORBLIND_COLORS] : [...BASE_COLORS];
-    }
-
-    reset() {
-      this.state = new GameState();
-      this.applyPalette();
-      this.stations.clear();
-      this.lines.clear();
-      this.trains.clear();
-      this.passengers.clear();
-      this.pointerState = { down: false };
-      this.selectedLineId = null;
-      this.generateRiver();
-      this.spawnInitialStations();
-      this.ensureInitialTrain();
-      this.saveState();
+      const useColorblind = this.settings.colorblind;
+      this.colorPalette = useColorblind ? [...COLORBLIND_COLORS] : [...BASE_COLORS];
+      this.state.colorblind = useColorblind;
     }
 
     restoreFromSave() {
+      let restored = false;
       try {
-        const settings = JSON.parse(localStorage.getItem('subwayPlannerSettings') || '{}');
-        if (settings) {
-          this.state.colorblind = !!settings.colorblind;
-          this.audio.enabled = settings.audio !== false;
-          this.applyPalette();
+        const raw = localStorage.getItem('subwayPlannerAutosave');
+        if (!raw) return false;
+        const save = JSON.parse(raw);
+        if (!save || !save.state) throw new Error('invalid save');
+        const version = save.saveSchemaVersion || 1;
+        if (version < SAVE_SCHEMA_VERSION) {
+          save.saveSchemaVersion = SAVE_SCHEMA_VERSION;
+          save.state.modeKey = save.state.modeKey || 'medium';
         }
-        const save = JSON.parse(localStorage.getItem('subwayPlannerAutosave') || 'null');
-        if (!save || !save.stations) throw new Error('no save');
-        Object.assign(this.state, save.state);
-        this.state.inventory = Object.assign({
-          linesLeft: 0,
-          locomotives: 0,
-          carriages: 0,
-          tunnels: 0,
-          interchanges: 0
-        }, this.state.inventory);
-        this.bestScore = this.state.bestScore;
-        this.generateRiver();
-        save.stations.forEach(s => {
+        const modeKey = save.state.modeKey || 'medium';
+        this.setMode(modeKey);
+        this.state = new GameState(this.modeKey, this.mode);
+        this.state.time = save.state.time || 0;
+        this.state.score = save.state.score || 0;
+        this.state.week = save.state.week || 1;
+        this.state.daySeconds = save.state.daySeconds || 0;
+        this.state.passengerSpawnRate = save.state.passengerSpawnRate || 1;
+        this.state.stationSpawnRate = save.state.stationSpawnRate || 1;
+        this.state.inventory = this.deserializeInventory(save.state.inventory, this.state.inventory);
+        this.state.upgradesAvailable = save.state.upgradesAvailable || [];
+        this.state.routeVersion = save.state.routeVersion || this.state.routeVersion;
+        this.bestScore = save.state.bestScore || this.bestScore;
+        this.state.bestScore = this.bestScore;
+        if (typeof save.state.colorblind === 'boolean') this.settings.colorblind = save.state.colorblind;
+        if (typeof save.state.audio === 'boolean') this.settings.audio = save.state.audio;
+        if (typeof save.state.dark === 'boolean') this.settings.dark = save.state.dark;
+        this.audio.enabled = this.settings.audio;
+        this.applyPalette();
+        this.applyTheme();
+        this.stations.clear();
+        this.lines.clear();
+        this.trains.clear();
+        this.passengers.clear();
+        this.pointerState = this.createPointerState();
+        const stations = save.stations || [];
+        stations.forEach(s => {
           const station = new Station(s.position, s.shapeType);
           station.id = s.id;
-          station.isInterchange = s.isInterchange;
-          station.queue = s.queue.map(q => {
+          station.isInterchange = !!s.isInterchange;
+          station.capacityBase = this.capacityBase;
+          station.capacityInterchange = this.capacityInterchange;
+          station.queue = (s.queue || []).map(q => {
             const passenger = new Passenger(q.desiredShape);
             this.passengers.add(passenger);
             return passenger;
           });
-          station.capacityVisible = s.capacityVisible;
-          station.overcrowdTimer = s.overcrowdTimer;
+          station.capacityVisible = Math.max(station.getCapacity(), s.capacityVisible || station.queue.length);
+          station.overcrowdTimer = s.overcrowdTimer || 0;
+          station.warningActive = false;
           this.stations.set(station.id, station);
         });
-        save.lines.forEach(l => {
-          const line = new Line(l.color);
+        const lines = save.lines || [];
+        lines.forEach(l => {
+          const line = new Line(l.color || this.colorPalette[0]);
           line.id = l.id;
-          line.stations = l.stations.slice();
+          line.stations = Array.isArray(l.stations) ? l.stations.slice() : [];
           line.tunnels = l.tunnels || 0;
           this.lines.set(line.id, line);
         });
-        save.trains.forEach(t => {
-          const tr = new Train(t.lineId);
-          tr.currentStationIndex = t.currentStationIndex;
+        const trains = save.trains || [];
+        trains.forEach(t => {
+          const tr = new Train(t.lineId, this.mode.trainSpeedMul || 1);
+          tr.currentStationIndex = t.currentStationIndex || 0;
           tr.nextStationIndex = t.nextStationIndex;
-          tr.progress = t.progress;
-          tr.direction = t.direction;
-          tr.capacity = t.capacity;
+          tr.progress = t.progress || 0;
+          tr.direction = t.direction || 1;
+          tr.capacity = t.capacity || tr.capacity;
           tr.passengers = (t.passengers || []).map(p => {
             const passenger = new Passenger(p.desiredShape);
             this.passengers.add(passenger);
             return passenger;
           });
-          tr.dwellTimer = t.dwellTimer;
-          tr.speed = t.speed;
+          tr.dwellTimer = t.dwellTimer || tr.dwellTimer;
+          tr.speed = t.speed || tr.speed;
           tr.justSpawned = false;
           this.trains.set(tr.id, tr);
           const line = this.lines.get(tr.lineId);
-          if (line) {
-            if (!line.trains.includes(tr.id)) line.trains.push(tr.id);
+          if (line && !line.trains.includes(tr.id)) {
+            line.trains.push(tr.id);
           }
         });
-        this.applyPalette();
         this.lines.forEach(line => line.recomputeGeometry(this.stations));
         this.state.routeVersion++;
         this.refreshLineList();
+        this.running = true;
+        this.updatePauseButton();
+        this.updateSpeedButton();
+        this.highlightModeCard(this.modeKey);
+        restored = true;
+        if (version < SAVE_SCHEMA_VERSION) {
+          this.saveState();
+        }
       } catch (err) {
-        this.reset();
+        console.warn('Failed to restore save', err);
+        this.clearAutosave();
       }
+      return restored;
     }
 
     saveState() {
       try {
         const save = {
+          saveSchemaVersion: SAVE_SCHEMA_VERSION,
           state: {
             time: this.state.time,
             score: this.state.score,
@@ -756,10 +1244,13 @@
             daySeconds: this.state.daySeconds,
             passengerSpawnRate: this.state.passengerSpawnRate,
             stationSpawnRate: this.state.stationSpawnRate,
-            inventory: this.state.inventory,
-            colorblind: this.state.colorblind,
-            audio: this.audio.enabled,
-            bestScore: this.bestScore
+            inventory: this.serializeInventory(this.state.inventory),
+            colorblind: this.settings.colorblind,
+            audio: this.settings.audio,
+            dark: this.settings.dark,
+            bestScore: this.bestScore,
+            modeKey: this.modeKey,
+            routeVersion: this.state.routeVersion
           },
           stations: Array.from(this.stations.values()).map(s => ({
             id: s.id,
@@ -800,17 +1291,21 @@
       const width = this.canvas.width / (window.devicePixelRatio || 1);
       const height = this.canvas.height / (window.devicePixelRatio || 1);
       const points = [];
-      const midY = height * 0.5;
-      const amplitude = height * 0.15;
-      const segments = 8;
+      const midY = height * 0.45;
+      const amplitude = height * 0.18;
+      const segments = 12;
       for (let i = 0; i <= segments; i++) {
         const t = i / segments;
+        const baseWave = Math.sin(t * Math.PI * 1.4 + Math.cos(t * Math.PI * 0.5)) * amplitude;
+        const offsetWave = Math.cos(t * Math.PI * 0.75) * amplitude * 0.35;
+        const jitter = (this.rng.nextFloat() - 0.5) * amplitude * 0.25;
         points.push({
-          x: lerp(width * 0.1, width * 0.9, t),
-          y: midY + Math.sin(t * Math.PI * 1.5) * amplitude
+          x: lerp(-width * 0.25, width * 1.25, t),
+          y: midY + baseWave + offsetWave + jitter
         });
       }
       this.state.riverShape = points;
+      this.state.riverWidth = Math.max(40, height * 0.12);
     }
 
     spawnInitialStations() {
@@ -823,38 +1318,45 @@
       ];
       ['circle', 'triangle', 'square'].forEach((shape, idx) => {
         const st = new Station(positions[idx], shape);
+        st.capacityBase = this.capacityBase;
+        st.capacityInterchange = this.capacityInterchange;
         st.capacityVisible = st.getCapacity();
         this.stations.set(st.id, st);
         this.state.stations.push(st.id);
       });
     }
 
-    ensureInitialTrain() {
-      // Create a starter line connecting first two stations
+    ensureStarterLine() {
       const stationIds = Array.from(this.stations.keys());
-      const line = new Line(this.colorPalette[0]);
+      if (stationIds.length < 2) return;
+      const line = new Line(this.colorPalette[0 % this.colorPalette.length]);
       line.stations = [stationIds[0], stationIds[1]];
       line.recomputeGeometry(this.stations);
-      line.tunnels = this.countTunnelsForIds(line.stations);
+      const neededTunnels = this.countTunnelsForIds(line.stations);
+      line.tunnels = neededTunnels;
       this.lines.set(line.id, line);
-      this.state.inventory.linesLeft = 1;
       this.selectedLineId = line.id;
-      const train = new Train(line.id);
+      if (neededTunnels > 0 && !this.spendInventory('tunnels', neededTunnels)) {
+        this.state.inventory.tunnels = 0;
+      }
+      this.spendInventory('linesLeft', 1);
+      const train = new Train(line.id, this.mode.trainSpeedMul || 1);
       train.currentStationIndex = 0;
-      train.nextStationIndex = 1;
+      train.nextStationIndex = Math.min(1, line.stations.length - 1);
+      train.justSpawned = false;
       line.trains.push(train.id);
       this.trains.set(train.id, train);
-      this.state.inventory.locomotives = 0;
-      this.state.inventory.tunnels = 1;
+      this.spendInventory('locomotives', 1);
       this.refreshLineList();
       this.state.routeVersion++;
     }
 
     generateStationShape() {
       const baseShapes = ['circle', 'triangle', 'square'];
-      if (this.state.week > 3) baseShapes.push('diamond');
-      if (this.state.week > 5) baseShapes.push('pentagon');
-      if (this.state.week > 7) baseShapes.push('star');
+      const adjustedWeek = this.state.week + (this.mode.rareShapeOffset || 0);
+      if (adjustedWeek > 3) baseShapes.push('diamond');
+      if (adjustedWeek > 5) baseShapes.push('pentagon');
+      if (adjustedWeek > 7) baseShapes.push('star');
       return randChoice(baseShapes);
     }
 
@@ -873,6 +1375,8 @@
       }
       if (!pos) return;
       const station = new Station(pos, this.generateStationShape());
+      station.capacityBase = this.capacityBase;
+      station.capacityInterchange = this.capacityInterchange;
       station.capacityVisible = station.getCapacity();
       this.stations.set(station.id, station);
       this.state.routeVersion++;
@@ -918,96 +1422,202 @@
       return best;
     }
 
+    findNearestSegment(point, radius = 28) {
+      let best = null;
+      this.lines.forEach(line => {
+        for (let i = 0; i < line.stations.length - 1; i++) {
+          const a = this.stations.get(line.stations[i]);
+          const b = this.stations.get(line.stations[i + 1]);
+          if (!a || !b) continue;
+          const dist = distanceToSegment(point, a.position, b.position);
+          if (dist <= radius && (!best || dist < best.distance)) {
+            best = { line, index: i, distance: dist };
+          }
+        }
+      });
+      return best;
+    }
+
+    getLinesContainingStation(stationId) {
+      const matches = [];
+      this.lines.forEach(line => {
+        if (line.stations.includes(stationId)) matches.push(line);
+      });
+      return matches;
+    }
+
+    applyStationsToLine(line, stations, tooltipStation) {
+      const before = this.countTunnelsForIds(line.stations);
+      const after = this.countTunnelsForIds(stations);
+      const diff = after - before;
+      if (diff > 0 && !this.spendInventory('tunnels', diff)) {
+        if (tooltipStation) this.showTooltip(tooltipStation.position, 'Need a tunnel');
+        return false;
+      }
+      if (diff < 0) this.addInventory('tunnels', Math.abs(diff));
+      line.stations = stations;
+      line.tunnels = after;
+      line.recomputeGeometry(this.stations);
+      this.state.routeVersion++;
+      this.refreshLineList();
+      return true;
+    }
+
+    createNewLineBetweenStations(aId, bId) {
+      if (!this.spendInventory('linesLeft', 1)) {
+        const station = this.stations.get(aId);
+        if (station) this.showTooltip(station.position, 'No lines available');
+        return null;
+      }
+      const line = new Line(this.colorPalette[(this.lines.size) % this.colorPalette.length]);
+      line.stations = [aId, bId];
+      line.recomputeGeometry(this.stations);
+      const neededTunnels = this.countTunnelsForIds(line.stations);
+      if (neededTunnels > 0 && !this.spendInventory('tunnels', neededTunnels)) {
+        this.addInventory('linesLeft', 1);
+        const station = this.stations.get(bId) || this.stations.get(aId);
+        if (station) this.showTooltip(station.position, 'Need a tunnel');
+        return null;
+      }
+      line.tunnels = neededTunnels;
+      this.lines.set(line.id, line);
+      this.selectedLineId = line.id;
+      this.state.routeVersion++;
+      this.refreshLineList();
+      return line;
+    }
+
     onPointerDown(e) {
       e.preventDefault();
       this.canvas.setPointerCapture(e.pointerId);
       const world = this.pointerToWorld(e);
       const station = this.findNearestStation(world);
-      this.pointerState.down = true;
-      this.pointerState.start = world;
-      this.pointerState.current = world;
+      const segment = this.findNearestSegment(world, 26);
+      const state = this.createPointerState();
+      state.down = true;
+      state.start = world;
+      state.current = world;
+      state.stationStart = station || null;
+      state.stationHover = station || null;
+      state.segmentHover = segment || null;
+      state.creating = !!station;
+      state.extendDir = 'end';
+      this.pointerState = state;
       if (station) {
-        this.pointerState.stationStart = station;
-        let line = this.selectedLineId ? this.lines.get(this.selectedLineId) : null;
-        if (!line || !line.stations.includes(station.id)) {
-          line = Array.from(this.lines.values()).find(l => l.stations.includes(station.id)) || line;
-        }
-        if (!line || !line.stations.includes(station.id)) {
-          if (this.state.inventory.linesLeft <= 0) {
-            this.showTooltip(station.position, 'No lines available');
-            this.pointerState.lineId = null;
-            return;
-          }
-          const color = this.colorPalette[(this.lines.size) % this.colorPalette.length];
-          line = new Line(color);
-          line.stations = [station.id];
-          this.lines.set(line.id, line);
+        const lines = this.getLinesContainingStation(station.id);
+        let line = lines.find(l => l.id === this.selectedLineId) || lines[0] || null;
+        if (line) {
+          state.lineId = line.id;
+          state.action = 'extend';
+          state.extendDir = 'any';
+          const first = line.stations[0];
+          const last = line.stations[line.stations.length - 1];
+          if (station.id === first && station.id !== last) state.extendDir = 'start';
+          if (station.id === last && station.id !== first) state.extendDir = 'end';
           this.selectedLineId = line.id;
-          this.state.inventory.linesLeft--;
-          this.state.routeVersion++;
-          this.refreshLineList();
         } else {
-          this.selectedLineId = line.id;
+          state.action = 'pending';
+          state.pendingNewLine = true;
+          state.lineId = this.selectedLineId || null;
         }
-        this.pointerState.lineId = line.id;
-        this.pointerState.creating = true;
-        const first = line.stations[0];
-        const last = line.stations[line.stations.length - 1];
-        this.pointerState.extendDir = (station.id === first && station.id !== last) ? 'start' : 'end';
-      } else {
-        this.pointerState.stationStart = null;
-        this.pointerState.lineId = null;
+      } else if (segment) {
+        state.action = 'segment';
+        state.lineId = segment.line.id;
+        state.creating = true;
+        this.selectedLineId = segment.line.id;
       }
     }
 
     onPointerMove(e) {
       const world = this.pointerToWorld(e);
       this.pointerState.current = world;
-      this.hoverStation = this.findNearestStation(world, 30);
-      if (!this.pointerState.down || !this.pointerState.lineId) return;
-      const line = this.lines.get(this.pointerState.lineId);
-      if (!line) return;
-      const station = this.findNearestStation(world);
-      if (station && station !== this.pointerState.stationHover) {
-        this.pointerState.stationHover = station;
-      }
+      this.pointerState.stationHover = this.findNearestStation(world, 30);
+      this.pointerState.segmentHover = this.findNearestSegment(world, 24);
+      this.hoverStation = this.pointerState.stationHover;
     }
 
     onPointerUp(e) {
       this.canvas.releasePointerCapture(e.pointerId);
       if (!this.pointerState.down) return;
-      this.pointerState.down = false;
-      const line = this.pointerState.lineId ? this.lines.get(this.pointerState.lineId) : null;
-      if (line && this.pointerState.stationStart) {
-        const target = this.findNearestStation(this.pointerState.current);
-        if (target && target.id !== this.pointerState.stationStart.id) {
-          const pendingType = this.pointerState.extendDir === 'start' ? 'prepend' : 'append';
-          const before = this.countTunnelsForIds(line.stations);
-          const after = this.countTunnelsForLine(line, { type: pendingType, stationId: target.id });
-          const diff = after - before;
-          if (diff > this.state.inventory.tunnels) {
-            this.showTooltip(target.position, 'Need a tunnel');
-          } else {
-            if (pendingType === 'prepend') {
-              line.stations.unshift(target.id);
+      const { stationStart } = this.pointerState;
+      const current = this.pointerState.current;
+      const targetStation = this.findNearestStation(current);
+      const segmentTarget = this.findNearestSegment(current, 26);
+      let acted = false;
+      if (stationStart) {
+        const pointerLine = this.pointerState.lineId ? this.lines.get(this.pointerState.lineId) : null;
+        const showAlreadyTooltip = target => {
+          if (target) this.showTooltip(target.position, 'Station already on line');
+        };
+        if (this.pointerState.pendingNewLine) {
+          if (segmentTarget) {
+            const line = segmentTarget.line;
+            if (line && !line.stations.includes(stationStart.id)) {
+              const stations = line.stations.slice();
+              stations.splice(segmentTarget.index + 1, 0, stationStart.id);
+              acted = this.applyStationsToLine(line, stations, stationStart);
+              if (acted) this.selectedLineId = line.id;
+            } else if (line) {
+              showAlreadyTooltip(stationStart);
+            }
+          } else if (targetStation && targetStation.id !== stationStart.id) {
+            const targetLines = this.getLinesContainingStation(targetStation.id);
+            if (targetLines.length) {
+              const line = targetLines.find(l => l.id === this.selectedLineId) || targetLines[0];
+              const stations = line.stations.slice();
+              const idx = stations.indexOf(targetStation.id);
+              if (idx === 0) stations.unshift(stationStart.id);
+              else if (idx === stations.length - 1) stations.push(stationStart.id);
+              else stations.splice(idx + 1, 0, stationStart.id);
+              acted = this.applyStationsToLine(line, stations, stationStart);
+              if (acted) this.selectedLineId = line.id;
+              else if (!acted && line.stations.includes(stationStart.id)) {
+                showAlreadyTooltip(stationStart);
+              }
             } else {
-              line.stations.push(target.id);
+              const line = this.createNewLineBetweenStations(stationStart.id, targetStation.id);
+              acted = !!line;
             }
-            if (diff > 0) {
-              this.state.inventory.tunnels -= diff;
-            } else if (diff < 0) {
-              this.state.inventory.tunnels += Math.abs(diff);
+          }
+        } else if (pointerLine) {
+          if (targetStation && targetStation.id !== stationStart.id && !pointerLine.stations.includes(targetStation.id)) {
+            const stations = pointerLine.stations.slice();
+            if (this.pointerState.extendDir === 'start') {
+              stations.unshift(targetStation.id);
+            } else if (this.pointerState.extendDir === 'end') {
+              stations.push(targetStation.id);
+            } else if (segmentTarget && segmentTarget.line.id === pointerLine.id) {
+              stations.splice(segmentTarget.index + 1, 0, targetStation.id);
+            } else {
+              stations.push(targetStation.id);
             }
-            line.tunnels = after;
-            line.recomputeGeometry(this.stations);
-            this.state.routeVersion++;
+            acted = this.applyStationsToLine(pointerLine, stations, targetStation);
+          } else if (targetStation && pointerLine.stations.includes(targetStation.id)) {
+            showAlreadyTooltip(targetStation);
+          } else if (segmentTarget && segmentTarget.line.id === pointerLine.id && !pointerLine.stations.includes(stationStart.id)) {
+            const stations = pointerLine.stations.slice();
+            stations.splice(segmentTarget.index + 1, 0, stationStart.id);
+            acted = this.applyStationsToLine(pointerLine, stations, stationStart);
+          } else if (segmentTarget && segmentTarget.line.id === pointerLine.id) {
+            showAlreadyTooltip(stationStart);
           }
         }
+      } else if (segmentTarget && targetStation) {
+        const line = segmentTarget.line;
+        if (line && !line.stations.includes(targetStation.id)) {
+          const stations = line.stations.slice();
+          stations.splice(segmentTarget.index + 1, 0, targetStation.id);
+          acted = this.applyStationsToLine(line, stations, targetStation);
+        } else if (line) {
+          this.showTooltip(targetStation.position, 'Station already on line');
+        }
       }
-      this.pointerState.lineId = null;
-      this.pointerState.stationStart = null;
-      this.pointerState.stationHover = null;
-      this.pointerState.creating = false;
+      this.pointerState = this.createPointerState();
+      this.hoverStation = null;
+      if (acted) {
+        this.saveTimer = 0;
+        this.saveState();
+      }
     }
 
     showTooltip(position, text) {
@@ -1034,20 +1644,21 @@
         swatch.style.background = line.color;
         left.appendChild(swatch);
         const label = document.createElement('span');
-        label.textContent = `Line ${line.id.split('-')[1]}`;
+        label.textContent = `Line ${line.id.split('-')[1]} · ${line.trains.length} trains`;
         left.appendChild(label);
         entry.appendChild(left);
         const btn = document.createElement('button');
-        btn.textContent = `+ Train (${line.trains.length})`;
+        const available = this.formatInventoryValue(this.state.inventory.locomotives);
+        btn.textContent = `Add Train (${available})`;
         btn.style.fontSize = '11px';
+        btn.disabled = !this.hasInventory('locomotives');
         btn.addEventListener('click', () => {
-          if (this.state.inventory.locomotives > 0) {
-            const train = new Train(line.id);
+          if (this.spendInventory('locomotives', 1)) {
+            const train = new Train(line.id, this.mode.trainSpeedMul || 1);
             train.currentStationIndex = 0;
             train.nextStationIndex = Math.min(1, line.stations.length - 1);
             this.trains.set(train.id, train);
             line.trains.push(train.id);
-            this.state.inventory.locomotives--;
             this.refreshLineList();
           }
         });
@@ -1080,23 +1691,22 @@
       return total;
     }
 
-    countTunnelsForLine(line, pending) {
-      const ids = line.stations.slice();
-      if (pending) {
-        if (pending.type === 'append') ids.push(pending.stationId);
-        if (pending.type === 'prepend') ids.unshift(pending.stationId);
-      }
-      return this.countTunnelsForIds(ids);
-    }
-
     spawnWeeklyUpgrade() {
       const upgrades = [];
-      if (this.state.inventory.locomotives < 4) upgrades.push({ type: 'locomotive', label: '+ Locomotive' });
-      if (this.state.inventory.carriages < 3) upgrades.push({ type: 'carriage', label: '+ Carriage' });
+      if (!this.mode.infiniteLocos && this.state.inventory.locomotives < 4) {
+        upgrades.push({ type: 'locomotive', label: '+ Locomotive' });
+      }
+      if (!this.mode.infiniteCarriages && this.state.inventory.carriages < 3) {
+        upgrades.push({ type: 'carriage', label: '+ Carriage' });
+      }
       upgrades.push({ type: 'tunnels', label: '+2 Tunnels' });
       if (this.state.inventory.linesLeft < 5) upgrades.push({ type: 'line', label: '+ New Line' });
       upgrades.push({ type: 'interchange', label: 'Interchange Upgrade' });
-      this.state.upgradesAvailable = this.shuffle(upgrades).slice(0, 3);
+      if (!upgrades.length) upgrades.push({ type: 'tunnels', label: '+2 Tunnels' });
+      while (upgrades.length < this.weeklyChoiceCount) {
+        upgrades.push({ type: 'tunnels', label: '+2 Tunnels' });
+      }
+      this.state.upgradesAvailable = this.shuffle(upgrades).slice(0, this.weeklyChoiceCount);
       const panel = this.overlays.upgradePanel;
       panel.innerHTML = '';
       this.state.upgradesAvailable.forEach(upg => {
@@ -1124,25 +1734,28 @@
 
     applyUpgrade(type) {
       switch (type) {
-        case 'locomotive': this.state.inventory.locomotives++; break;
-        case 'carriage': this.state.inventory.carriages++; this.trains.forEach(tr => tr.capacity += 2); break;
-        case 'tunnels': this.state.inventory.tunnels += 2; break;
-        case 'line': this.state.inventory.linesLeft++; break;
-        case 'interchange': this.state.inventory.interchanges++; this.upgradeRandomStation(); break;
+        case 'locomotive': this.addInventory('locomotives', 1); break;
+        case 'carriage': this.addInventory('carriages', 1); this.trains.forEach(tr => tr.capacity += 2); break;
+        case 'tunnels': this.addInventory('tunnels', 2); break;
+        case 'line': this.addInventory('linesLeft', 1); break;
+        case 'interchange': this.addInventory('interchanges', 1); this.upgradeRandomStation(); break;
       }
     }
 
     upgradeRandomStation() {
       const candidate = randChoice(Array.from(this.stations.values()));
-      if (candidate) candidate.isInterchange = true;
+      if (candidate) {
+        candidate.isInterchange = true;
+        candidate.capacityVisible = Math.max(candidate.capacityVisible, candidate.getCapacity());
+      }
     }
 
     updateHUD() {
       const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
       const dayIndex = Math.floor((this.state.daySeconds / 20) % 7);
       this.overlays.hudScore.textContent = this.state.score;
-      this.overlays.hudClock.textContent = `Week ${this.state.week} · ${dayNames[dayIndex]}`;
-      this.overlays.hudInventory.textContent = `Lines: ${this.state.inventory.linesLeft} · Locos: ${this.state.inventory.locomotives} · Tunnels: ${this.state.inventory.tunnels}`;
+      this.overlays.hudClock.textContent = `${this.mode.name} · Week ${this.state.week} · ${dayNames[dayIndex]}`;
+      this.overlays.hudInventory.textContent = `Lines: ${this.formatInventoryValue(this.state.inventory.linesLeft)} · Locos: ${this.formatInventoryValue(this.state.inventory.locomotives)} · Tunnels: ${this.formatInventoryValue(this.state.inventory.tunnels)}`;
       if (this.debugEnabled) {
         this.overlays.debugPanel.textContent = `FPS: ${this.fps.toFixed(1)}\nStations: ${this.stations.size}\nPassengers: ${this.passengers.size}\nTrains: ${this.trains.size}\nLines: ${this.lines.size}`;
         this.overlays.debugPanel.classList.add('active');
@@ -1182,8 +1795,8 @@
       }
       this.lastSpawnStation += dt;
       this.lastSpawnPassenger += dt;
-      const stationInterval = Math.max(10, 40 - this.state.week * 2);
-      const passengerInterval = Math.max(1, 4 - this.state.week * 0.15);
+      const stationInterval = Math.max(10, 40 - this.state.week * 2) / this.spawnMultiplier;
+      const passengerInterval = Math.max(1, 4 - this.state.week * 0.15) / this.spawnMultiplier;
       if (this.lastSpawnStation > stationInterval) {
         this.spawnStation();
         this.lastSpawnStation = 0;
@@ -1203,17 +1816,33 @@
     }
 
     updateStations(dt) {
+      let anyWarning = false;
+      const warningThreshold = this.mode.gameOver ? Math.max(1.5, this.overcrowdGrace * 0.45) : 3;
       this.stations.forEach(station => {
         const cap = station.getCapacity();
         if (station.queue.length > cap) {
           station.overcrowdTimer += dt;
-          if (station.overcrowdTimer > 10) {
+          if (!station.warningActive && (station.overcrowdTimer > warningThreshold || !this.mode.gameOver)) {
+            station.warningActive = true;
+            this.showAlert('Station overcrowded — service slowing');
+          }
+          if (!this.mode.gameOver) {
+            if (this.speed > 1) {
+              this.speed = 1;
+              this.updateSpeedButton();
+            }
+          } else if (station.overcrowdTimer > this.overcrowdGrace) {
             this.gameOver(station);
           }
         } else {
-          station.overcrowdTimer = Math.max(0, station.overcrowdTimer - dt * 0.5);
+          station.overcrowdTimer = Math.max(0, station.overcrowdTimer - dt * 1.5);
+          if (station.warningActive && station.queue.length <= cap) {
+            station.warningActive = false;
+          }
         }
+        if (station.warningActive) anyWarning = true;
       });
+      if (!anyWarning) this.clearAlert();
     }
 
     computeRoutes() {
@@ -1366,6 +1995,16 @@
     }
 
     gameOver(station) {
+      if (!this.mode.gameOver) {
+        station.warningActive = true;
+        this.showAlert('Station overcrowded — service slowing');
+        if (this.speed > 1) {
+          this.speed = 1;
+          this.updateSpeedButton();
+        }
+        return;
+      }
+      this.clearAlert();
       this.running = false;
       this.showModal('Overcrowding!', `A station overflowed. Score: ${this.state.score}. Best: ${this.bestScore}`, () => {
         this.hideModal();
@@ -1391,14 +2030,31 @@
 
     drawRiver(ctx) {
       const points = this.state.riverShape;
+      if (!points || points.length < 2) return;
+      const width = this.state.riverWidth || 40;
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
       ctx.save();
-      ctx.strokeStyle = '#98c1ff';
-      ctx.lineWidth = 26;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, this.theme.riverHighlight);
+      gradient.addColorStop(1, this.theme.riverBase);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = width;
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      for (let i = 1; i < points.length - 1; i++) {
+        const midX = (points[i].x + points[i + 1].x) / 2;
+        const midY = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+      }
+      const last = points[points.length - 1];
+      const prev = points[points.length - 2];
+      ctx.quadraticCurveTo(prev.x, prev.y, last.x, last.y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = this.theme.riverHighlight;
+      ctx.lineWidth = width * 0.55;
       ctx.stroke();
       ctx.restore();
     }
@@ -1430,13 +2086,13 @@
         const size = station.isInterchange ? 18 : 14;
         ctx.save();
         ctx.translate(pos.x, pos.y);
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = overflow ? '#ff3b30' : '#333';
+        ctx.fillStyle = this.theme.stationFill;
+        ctx.strokeStyle = overflow ? this.theme.stationOverflow : this.theme.stationStroke;
         ctx.lineWidth = station.isInterchange ? 4 : 2;
         drawShape(ctx, station.shapeType, size);
         if (station.isInterchange) {
           ctx.lineWidth = 2;
-          ctx.strokeStyle = overflow ? '#ff3b30' : '#333';
+          ctx.strokeStyle = overflow ? this.theme.stationOverflow : this.theme.stationStroke;
           drawShape(ctx, station.shapeType, size + 6, false);
         }
         ctx.restore();
@@ -1454,14 +2110,14 @@
           const y = pos.y + Math.sin(angle) * 18;
           ctx.save();
           ctx.translate(x, y);
-          ctx.fillStyle = '#333';
-          ctx.strokeStyle = '#333';
+          ctx.fillStyle = this.theme.passengerColor;
+          ctx.strokeStyle = this.theme.passengerColor;
           drawShape(ctx, psg.desiredShape, baseSize, true);
           ctx.restore();
         });
         if (queue.length > 6) {
           ctx.save();
-          ctx.fillStyle = '#333';
+          ctx.fillStyle = this.theme.passengerColor;
           ctx.font = '10px system-ui';
           ctx.fillText(`+${queue.length - 6}`, pos.x + 20, pos.y + 3);
           ctx.restore();
@@ -1486,8 +2142,8 @@
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(angle);
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = '#111';
+        ctx.fillStyle = this.theme.trainFill;
+        ctx.strokeStyle = this.theme.trainStroke;
         ctx.lineWidth = 2;
         ctx.beginPath();
         const width = 26;
@@ -1512,8 +2168,9 @@
       const start = this.pointerState.stationStart.position;
       const current = this.pointerState.current;
       ctx.save();
-      ctx.strokeStyle = '#999';
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = this.theme.stationStroke;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 4;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
@@ -1523,6 +2180,25 @@
     }
 
     drawSelection(ctx) {
+      const seg = this.pointerState.segmentHover;
+      const segLineId = seg ? seg.line.id : null;
+      const allowHover = seg && (this.pointerState.down || (this.selectedLineId && segLineId === this.selectedLineId));
+      if (allowHover) {
+        const segLine = seg.line;
+        const a = this.stations.get(segLine.stations[seg.index]);
+        const b = this.stations.get(segLine.stations[seg.index + 1]);
+        if (a && b) {
+          ctx.save();
+          ctx.strokeStyle = segLine.color;
+          ctx.globalAlpha = 0.4;
+          ctx.lineWidth = 12;
+          ctx.beginPath();
+          ctx.moveTo(a.position.x, a.position.y);
+          ctx.lineTo(b.position.x, b.position.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
       if (!this.selectedLineId) return;
       const line = this.lines.get(this.selectedLineId);
       if (!line) return;
