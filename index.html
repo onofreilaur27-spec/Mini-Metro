@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Subway Planner</title>
+<style>
+  :root {
+    color-scheme: light;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    --panel-bg: rgba(255, 255, 255, 0.9);
+    --panel-border: rgba(0,0,0,0.1);
+    --text-color: #222;
+    --accent: #0077ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f6f7f8;
+    color: var(--text-color);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hud {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 10px 14px;
+    background: var(--panel-bg);
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+  }
+  .hud strong {
+    font-size: 20px;
+    letter-spacing: 0.4px;
+  }
+  .hud span {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+  .toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    pointer-events: auto;
+  }
+  .toolbar button,
+  .modal button,
+  .upgrade-panel button,
+  .help-toggle {
+    font: inherit;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.95);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .toolbar button:active,
+  .modal button:active,
+  .upgrade-panel button:active,
+  .help-toggle:active {
+    transform: translateY(1px);
+  }
+  .toolbar button.selected {
+    background: var(--accent);
+    color: white;
+  }
+  .bottom-panel {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+  }
+  .upgrade-panel {
+    display: none;
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    pointer-events: auto;
+    gap: 12px;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+  }
+  .upgrade-panel.active {
+    display: flex;
+  }
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.45);
+    pointer-events: auto;
+  }
+  .modal-backdrop.active {
+    display: flex;
+  }
+  .modal {
+    background: white;
+    padding: 24px 32px;
+    border-radius: 16px;
+    min-width: 280px;
+    text-align: center;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.25);
+  }
+  .modal h2 {
+    margin-top: 0;
+  }
+  .assign-panel {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    padding: 10px 14px;
+    pointer-events: auto;
+    min-width: 200px;
+  }
+  .assign-panel h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .assign-panel .line-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .assign-panel .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .tooltip {
+    position: absolute;
+    padding: 6px 10px;
+    background: rgba(30,30,30,0.9);
+    color: white;
+    border-radius: 6px;
+    font-size: 11px;
+    pointer-events: none;
+    transform: translate(-50%, -120%);
+    white-space: nowrap;
+    display: none;
+  }
+  .tooltip.active {
+    display: block;
+  }
+  .help-toggle {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    pointer-events: auto;
+  }
+  .help-overlay {
+    position: absolute;
+    inset: 10% 15%;
+    background: rgba(255,255,255,0.96);
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    padding: 24px;
+    overflow: auto;
+    display: none;
+    pointer-events: auto;
+  }
+  .help-overlay.active {
+    display: block;
+  }
+  .debug-panel {
+    position: absolute;
+    left: 12px;
+    top: 140px;
+    background: rgba(0,0,0,0.7);
+    color: #0fffd7;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 11px;
+    display: none;
+    pointer-events: none;
+  }
+  .debug-panel.active {
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .hud {
+      font-size: 14px;
+      min-width: 120px;
+    }
+    .toolbar {
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .assign-panel {
+      font-size: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="overlay">
+  <div class="hud" id="hud">
+    <strong id="score">0</strong>
+    <span id="clock">Week 1 · Monday</span>
+    <span id="inventory">Lines: 0 · Locos: 0 · Tunnels: 0</span>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <button id="pauseBtn">Pause</button>
+    <button id="speedBtn">Speed 1x</button>
+    <button id="undoBtn">Undo Segment (Z)</button>
+    <button id="deleteBtn">Delete Line</button>
+    <button id="restartBtn">Restart (R)</button>
+    <button id="settingsBtn">Settings</button>
+  </div>
+  <div class="assign-panel" id="assignPanel">
+    <h3>Lines &amp; Trains</h3>
+    <div id="lineList"></div>
+    <div style="font-size:11px;opacity:0.7;margin-top:8px;">Drag locomotives onto lines to add trains.</div>
+  </div>
+  <div class="upgrade-panel" id="upgradePanel"></div>
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <h2 id="modalTitle"></h2>
+      <p id="modalBody"></p>
+      <button id="modalPrimary">OK</button>
+    </div>
+  </div>
+  <div class="tooltip" id="tooltip"></div>
+  <button class="help-toggle" id="helpToggle">?</button>
+  <div class="help-overlay" id="helpOverlay">
+    <h2>How to Play</h2>
+    <p>Connect stations by dragging between them to create subway lines. Trains will automatically travel along each line, carrying passengers to stations that match their shapes.</p>
+    <ul>
+      <li>Passengers wait at stations; deliver them before stations overcrowd.</li>
+      <li>Lines crossing the river consume tunnels. If you run out of tunnels you cannot cross until you earn more.</li>
+      <li>Every in-game week you may choose an upgrade. Pause with Space, adjust speed with +/-.</li>
+      <li>Toggle colorblind mode and audio in Settings.</li>
+      <li>Press D to show debug stats.</li>
+    </ul>
+    <button id="closeHelp">Close</button>
+  </div>
+  <div class="debug-panel" id="debugPanel"></div>
+</div>
+<script>
+(() => {
+  // Utility functions
+  const randRange = (min, max) => Math.random() * (max - min) + min;
+  const randChoice = arr => arr[Math.floor(Math.random() * arr.length)];
+  const clamp = (v, min, max) => v < min ? min : v > max ? max : v;
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  let NEXT_ID = 1;
+  const uid = prefix => `${prefix}-${NEXT_ID++}`;
+
+  const SHAPES = ["circle", "triangle", "square", "diamond", "pentagon", "star"];
+  const BASE_COLORS = [
+    "#f04b4c", "#3d8ef5", "#ffc107", "#34c759", "#8e44ad", "#ff6f91", "#00bcd4", "#ff7043"
+  ];
+  const COLORBLIND_COLORS = [
+    "#0072b2", "#d55e00", "#009e73", "#cc79a7", "#f0e442", "#56b4e9", "#e69f00", "#000000"
+  ];
+
+  /**
+   * Simple seeded PRNG for deterministic weekly upgrade choices.
+   */
+  class RNG {
+    constructor(seed = Date.now()) {
+      this.seed = seed % 2147483647;
+      if (this.seed <= 0) this.seed += 2147483646;
+    }
+    next() {
+      return this.seed = this.seed * 16807 % 2147483647;
+    }
+    nextFloat() {
+      return (this.next() - 1) / 2147483646;
+    }
+    choice(arr) {
+      return arr[Math.floor(this.nextFloat() * arr.length)];
+    }
+  }
+
+  class Passenger {
+    constructor(desiredShape) {
+      this.id = uid('psg');
+      this.desiredShape = desiredShape;
+      this.route = null;
+    }
+  }
+
+  class Station {
+    constructor(position, shapeType = 'circle') {
+      this.id = uid('st');
+      this.position = position;
+      this.shapeType = shapeType;
+      this.isInterchange = false;
+      this.queue = [];
+      this.capacityVisible = 6;
+      this.overcrowdTimer = 0;
+      this.lastRouteVersion = 0;
+    }
+    getCapacity() {
+      return this.isInterchange ? 12 : 8;
+    }
+    enqueue(passenger) {
+      this.queue.push(passenger);
+    }
+  }
+
+  class Line {
+    constructor(color) {
+      this.id = uid('ln');
+      this.color = color;
+      this.stations = [];
+      this.trains = [];
+      this.tunnels = 0;
+      this.loop = false;
+      this.lengthCache = { total: 0, segments: [] };
+    }
+    recomputeGeometry(stationMap) {
+      const segs = [];
+      let total = 0;
+      for (let i = 0; i < this.stations.length - 1; i++) {
+        const a = stationMap.get(this.stations[i]).position;
+        const b = stationMap.get(this.stations[i + 1]).position;
+        const len = distance(a, b);
+        segs.push({ length: len, from: i, to: i + 1 });
+        total += len;
+      }
+      this.loop = this.stations.length > 2 && this.stations[0] === this.stations[this.stations.length - 1];
+      this.lengthCache = { total, segments: segs };
+    }
+  }
+
+  class Train {
+    constructor(lineId) {
+      this.id = uid('tr');
+      this.lineId = lineId;
+      this.currentStationIndex = 0;
+      this.nextStationIndex = 1;
+      this.progress = 0;
+      this.direction = 1;
+      this.capacity = 6;
+      this.passengers = [];
+      this.dwellTimer = 1.2;
+      this.speed = 60; // px per second
+      this.justSpawned = true;
+    }
+  }
+
+  class GameState {
+    constructor() {
+      this.time = 0;
+      this.score = 0;
+      this.week = 1;
+      this.daySeconds = 0;
+      this.upgradesAvailable = [];
+      this.riverShape = [];
+      this.inventory = {
+        linesLeft: 2,
+        locomotives: 1,
+        carriages: 1,
+        tunnels: 1,
+        interchanges: 0
+      };
+      this.lines = [];
+      this.stations = [];
+      this.trains = [];
+      this.passengerSpawnRate = 1;
+      this.stationSpawnRate = 1;
+      this.routeVersion = 1;
+      this.colorblind = false;
+      this.audio = true;
+      this.bestScore = Number(localStorage.getItem('subwayPlannerBest') || '0');
+    }
+  }
+
+  class AudioManager {
+    constructor() {
+      this.enabled = true;
+      this.ctx = null;
+    }
+    init() {
+      if (this.ctx) return;
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    playDing() {
+      if (!this.enabled) return;
+      if (!this.ctx) this.init();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.value = 0.0001;
+      gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, this.ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.3);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.3);
+    }
+  }
+
+  class Game {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.state = new GameState();
+      this.stations = new Map();
+      this.lines = new Map();
+      this.trains = new Map();
+      this.passengers = new Set();
+      this.running = true;
+      this.speed = 1;
+      this.pointerState = {
+        down: false,
+        start: null,
+        current: null,
+        lineId: null,
+        stationStart: null,
+        stationHover: null,
+        creating: false,
+        extendDir: 'end'
+      };
+      this.hoverStation = null;
+      this.selectedLineId = null;
+      this.lastSpawnStation = 0;
+      this.lastSpawnPassenger = 0;
+      this.weeklyTimer = 0;
+      this.overlays = {
+        hudScore: document.getElementById('score'),
+        hudClock: document.getElementById('clock'),
+        hudInventory: document.getElementById('inventory'),
+        tooltip: document.getElementById('tooltip'),
+        upgradePanel: document.getElementById('upgradePanel'),
+        modalBackdrop: document.getElementById('modalBackdrop'),
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalBody: document.getElementById('modalBody'),
+        modalPrimary: document.getElementById('modalPrimary'),
+        lineList: document.getElementById('lineList'),
+        debugPanel: document.getElementById('debugPanel'),
+        helpOverlay: document.getElementById('helpOverlay')
+      };
+      this.colorPalette = [...BASE_COLORS];
+      this.rng = new RNG();
+      this.debugEnabled = false;
+      this.audio = new AudioManager();
+      this.bestScore = this.state.bestScore;
+      this.routeCache = new Map();
+      this.routeCacheVersion = -1;
+      this.fps = 0;
+      this.restoreFromSave();
+      this.setupCanvas();
+      this.setupUI();
+      this.generateRiver();
+      if (this.stations.size === 0) {
+        this.spawnInitialStations();
+      }
+      if (this.lines.size === 0) {
+        this.ensureInitialTrain();
+      }
+      this.lastTimestamp = performance.now();
+      this.accumulator = 0;
+      requestAnimationFrame(this.loop.bind(this));
+    }
+
+    setupCanvas() {
+      const resize = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+      window.addEventListener('resize', resize);
+      resize();
+    }
+
+    setupUI() {
+      const pauseBtn = document.getElementById('pauseBtn');
+      pauseBtn.addEventListener('click', () => this.togglePause());
+      document.getElementById('speedBtn').addEventListener('click', () => this.toggleSpeed());
+      document.getElementById('undoBtn').addEventListener('click', () => this.undoSegment());
+      document.getElementById('deleteBtn').addEventListener('click', () => this.deleteSelectedLine());
+      document.getElementById('restartBtn').addEventListener('click', () => this.confirmRestart());
+      document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
+      document.getElementById('modalPrimary').addEventListener('click', () => this.hideModal());
+      document.getElementById('helpToggle').addEventListener('click', () => this.toggleHelp());
+      document.getElementById('closeHelp').addEventListener('click', () => this.toggleHelp(false));
+
+      this.canvas.addEventListener('pointerdown', e => this.onPointerDown(e));
+      this.canvas.addEventListener('pointermove', e => this.onPointerMove(e));
+      this.canvas.addEventListener('pointerup', e => this.onPointerUp(e));
+      this.canvas.addEventListener('pointercancel', e => this.onPointerUp(e));
+
+      window.addEventListener('keydown', e => this.onKeyDown(e));
+    }
+
+    togglePause(force) {
+      this.running = force !== undefined ? force : !this.running;
+      document.getElementById('pauseBtn').textContent = this.running ? 'Pause' : 'Play';
+    }
+
+    toggleSpeed() {
+      const speeds = [1, 2, 4];
+      const idx = (speeds.indexOf(this.speed) + 1) % speeds.length;
+      this.speed = speeds[idx];
+      document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`;
+    }
+
+    undoSegment() {
+      const line = this.selectedLineId ? this.lines.get(this.selectedLineId) : null;
+      if (!line || line.stations.length <= 1) return;
+      const before = this.countTunnelsForIds(line.stations);
+      line.stations.pop();
+      line.recomputeGeometry(this.stations);
+      const after = this.countTunnelsForIds(line.stations);
+      const refund = Math.max(0, before - after);
+      if (refund) {
+        this.state.inventory.tunnels += refund;
+        line.tunnels = after;
+      }
+      this.state.routeVersion++;
+      this.refreshLineList();
+    }
+
+    deleteSelectedLine() {
+      if (!this.selectedLineId) return;
+      const line = this.lines.get(this.selectedLineId);
+      if (!line) return;
+      this.state.inventory.linesLeft++;
+      this.state.inventory.tunnels += line.tunnels;
+      line.trains.forEach(trId => {
+        const tr = this.trains.get(trId);
+        if (tr) {
+          const stationId = line.stations[tr.currentStationIndex] || line.stations[0];
+          const station = stationId ? this.stations.get(stationId) : null;
+          if (station) {
+            tr.passengers.forEach(psg => station.enqueue(psg));
+            station.capacityVisible = Math.max(station.capacityVisible, station.queue.length);
+          }
+          this.state.inventory.locomotives++;
+          this.trains.delete(trId);
+        }
+      });
+      this.lines.delete(this.selectedLineId);
+      this.selectedLineId = null;
+      this.state.routeVersion++;
+      this.refreshLineList();
+    }
+
+    confirmRestart() {
+      this.showModal('Restart game?', 'Your current progress will be lost. Continue?', () => {
+        this.hideModal();
+        this.reset();
+      });
+    }
+
+    openSettings() {
+      const body = document.createElement('div');
+      body.innerHTML = `
+        <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px;">
+          <input type="checkbox" id="cbColorblind" ${this.state.colorblind ? 'checked' : ''}/> Colorblind palette
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;justify-content:center;">
+          <input type="checkbox" id="cbAudio" ${this.audio.enabled ? 'checked' : ''}/> Audio ding
+        </label>
+      `;
+      this.showModal('Settings', body, () => {
+        const colorblind = body.querySelector('#cbColorblind').checked;
+        const audio = body.querySelector('#cbAudio').checked;
+        this.state.colorblind = colorblind;
+        this.audio.enabled = audio;
+        localStorage.setItem('subwayPlannerSettings', JSON.stringify({ colorblind, audio }));
+        this.applyPalette();
+        this.hideModal();
+      });
+    }
+
+    showModal(title, body, onConfirm) {
+      const { modalBackdrop, modalTitle, modalBody, modalPrimary } = this.overlays;
+      modalTitle.textContent = title;
+      modalBody.innerHTML = '';
+      if (typeof body === 'string') {
+        const p = document.createElement('p');
+        p.textContent = body;
+        modalBody.appendChild(p);
+      } else if (body instanceof Node) {
+        modalBody.appendChild(body);
+      }
+      modalPrimary.onclick = onConfirm || (() => this.hideModal());
+      modalBackdrop.classList.add('active');
+      this.togglePause(false);
+    }
+
+    hideModal() {
+      this.overlays.modalBackdrop.classList.remove('active');
+      this.togglePause(true);
+    }
+
+    toggleHelp(force) {
+      const overlay = this.overlays.helpOverlay;
+      const active = force !== undefined ? force : !overlay.classList.contains('active');
+      overlay.classList.toggle('active', active);
+    }
+
+    onKeyDown(e) {
+      if (e.target.tagName === 'INPUT') return;
+      switch (e.key) {
+        case ' ': e.preventDefault(); this.togglePause(); break;
+        case 'r': case 'R': this.confirmRestart(); break;
+        case '+': case '=': this.speed = Math.min(4, this.speed * 2); document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`; break;
+        case '-': case '_': this.speed = Math.max(1, this.speed / 2); document.getElementById('speedBtn').textContent = `Speed ${this.speed}x`; break;
+        case 'z': case 'Z': this.undoSegment(); break;
+        case 'd': case 'D': this.debugEnabled = !this.debugEnabled; break;
+        case '?': this.toggleHelp(); break;
+      }
+    }
+
+    applyPalette() {
+      this.colorPalette = this.state.colorblind ? [...COLORBLIND_COLORS] : [...BASE_COLORS];
+    }
+
+    reset() {
+      this.state = new GameState();
+      this.applyPalette();
+      this.stations.clear();
+      this.lines.clear();
+      this.trains.clear();
+      this.passengers.clear();
+      this.pointerState = { down: false };
+      this.selectedLineId = null;
+      this.generateRiver();
+      this.spawnInitialStations();
+      this.ensureInitialTrain();
+      this.saveState();
+    }
+
+    restoreFromSave() {
+      try {
+        const settings = JSON.parse(localStorage.getItem('subwayPlannerSettings') || '{}');
+        if (settings) {
+          this.state.colorblind = !!settings.colorblind;
+          this.audio.enabled = settings.audio !== false;
+          this.applyPalette();
+        }
+        const save = JSON.parse(localStorage.getItem('subwayPlannerAutosave') || 'null');
+        if (!save || !save.stations) throw new Error('no save');
+        Object.assign(this.state, save.state);
+        this.state.inventory = Object.assign({
+          linesLeft: 0,
+          locomotives: 0,
+          carriages: 0,
+          tunnels: 0,
+          interchanges: 0
+        }, this.state.inventory);
+        this.bestScore = this.state.bestScore;
+        this.generateRiver();
+        save.stations.forEach(s => {
+          const station = new Station(s.position, s.shapeType);
+          station.id = s.id;
+          station.isInterchange = s.isInterchange;
+          station.queue = s.queue.map(q => {
+            const passenger = new Passenger(q.desiredShape);
+            this.passengers.add(passenger);
+            return passenger;
+          });
+          station.capacityVisible = s.capacityVisible;
+          station.overcrowdTimer = s.overcrowdTimer;
+          this.stations.set(station.id, station);
+        });
+        save.lines.forEach(l => {
+          const line = new Line(l.color);
+          line.id = l.id;
+          line.stations = l.stations.slice();
+          line.tunnels = l.tunnels || 0;
+          this.lines.set(line.id, line);
+        });
+        save.trains.forEach(t => {
+          const tr = new Train(t.lineId);
+          tr.currentStationIndex = t.currentStationIndex;
+          tr.nextStationIndex = t.nextStationIndex;
+          tr.progress = t.progress;
+          tr.direction = t.direction;
+          tr.capacity = t.capacity;
+          tr.passengers = (t.passengers || []).map(p => {
+            const passenger = new Passenger(p.desiredShape);
+            this.passengers.add(passenger);
+            return passenger;
+          });
+          tr.dwellTimer = t.dwellTimer;
+          tr.speed = t.speed;
+          tr.justSpawned = false;
+          this.trains.set(tr.id, tr);
+          const line = this.lines.get(tr.lineId);
+          if (line) {
+            if (!line.trains.includes(tr.id)) line.trains.push(tr.id);
+          }
+        });
+        this.applyPalette();
+        this.lines.forEach(line => line.recomputeGeometry(this.stations));
+        this.state.routeVersion++;
+        this.refreshLineList();
+      } catch (err) {
+        this.reset();
+      }
+    }
+
+    saveState() {
+      try {
+        const save = {
+          state: {
+            time: this.state.time,
+            score: this.state.score,
+            week: this.state.week,
+            daySeconds: this.state.daySeconds,
+            passengerSpawnRate: this.state.passengerSpawnRate,
+            stationSpawnRate: this.state.stationSpawnRate,
+            inventory: this.state.inventory,
+            colorblind: this.state.colorblind,
+            audio: this.audio.enabled,
+            bestScore: this.bestScore
+          },
+          stations: Array.from(this.stations.values()).map(s => ({
+            id: s.id,
+            position: s.position,
+            shapeType: s.shapeType,
+            isInterchange: s.isInterchange,
+            queue: s.queue.map(p => ({ desiredShape: p.desiredShape })),
+            capacityVisible: s.capacityVisible,
+            overcrowdTimer: s.overcrowdTimer
+          })),
+          lines: Array.from(this.lines.values()).map(l => ({
+            id: l.id,
+            color: l.color,
+            stations: l.stations,
+            tunnels: l.tunnels
+          })),
+          trains: Array.from(this.trains.values()).map(t => ({
+            id: t.id,
+            lineId: t.lineId,
+            currentStationIndex: t.currentStationIndex,
+            nextStationIndex: t.nextStationIndex,
+            progress: t.progress,
+            direction: t.direction,
+            capacity: t.capacity,
+            passengers: t.passengers.map(p => ({ desiredShape: p.desiredShape })),
+            dwellTimer: t.dwellTimer,
+            speed: t.speed
+          }))
+        };
+        localStorage.setItem('subwayPlannerAutosave', JSON.stringify(save));
+        localStorage.setItem('subwayPlannerBest', String(this.bestScore));
+      } catch (err) {
+        console.warn('Failed to save', err);
+      }
+    }
+
+    generateRiver() {
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+      const points = [];
+      const midY = height * 0.5;
+      const amplitude = height * 0.15;
+      const segments = 8;
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        points.push({
+          x: lerp(width * 0.1, width * 0.9, t),
+          y: midY + Math.sin(t * Math.PI * 1.5) * amplitude
+        });
+      }
+      this.state.riverShape = points;
+    }
+
+    spawnInitialStations() {
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+      const positions = [
+        { x: width * 0.3, y: height * 0.3 },
+        { x: width * 0.7, y: height * 0.4 },
+        { x: width * 0.45, y: height * 0.7 }
+      ];
+      ['circle', 'triangle', 'square'].forEach((shape, idx) => {
+        const st = new Station(positions[idx], shape);
+        st.capacityVisible = st.getCapacity();
+        this.stations.set(st.id, st);
+        this.state.stations.push(st.id);
+      });
+    }
+
+    ensureInitialTrain() {
+      // Create a starter line connecting first two stations
+      const stationIds = Array.from(this.stations.keys());
+      const line = new Line(this.colorPalette[0]);
+      line.stations = [stationIds[0], stationIds[1]];
+      line.recomputeGeometry(this.stations);
+      line.tunnels = this.countTunnelsForIds(line.stations);
+      this.lines.set(line.id, line);
+      this.state.inventory.linesLeft = 1;
+      this.selectedLineId = line.id;
+      const train = new Train(line.id);
+      train.currentStationIndex = 0;
+      train.nextStationIndex = 1;
+      line.trains.push(train.id);
+      this.trains.set(train.id, train);
+      this.state.inventory.locomotives = 0;
+      this.state.inventory.tunnels = 1;
+      this.refreshLineList();
+      this.state.routeVersion++;
+    }
+
+    generateStationShape() {
+      const baseShapes = ['circle', 'triangle', 'square'];
+      if (this.state.week > 3) baseShapes.push('diamond');
+      if (this.state.week > 5) baseShapes.push('pentagon');
+      if (this.state.week > 7) baseShapes.push('star');
+      return randChoice(baseShapes);
+    }
+
+    spawnStation() {
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+      let attempts = 0;
+      let pos = null;
+      const minDist = 120;
+      while (attempts++ < 30) {
+        const candidate = { x: randRange(width * 0.1, width * 0.9), y: randRange(height * 0.15, height * 0.85) };
+        if (Array.from(this.stations.values()).every(st => distance(st.position, candidate) > minDist)) {
+          pos = candidate;
+          break;
+        }
+      }
+      if (!pos) return;
+      const station = new Station(pos, this.generateStationShape());
+      station.capacityVisible = station.getCapacity();
+      this.stations.set(station.id, station);
+      this.state.routeVersion++;
+    }
+
+    spawnPassenger() {
+      if (this.stations.size < 2) return;
+      const stationArr = Array.from(this.stations.values());
+      const origin = randChoice(stationArr);
+      let targetShape;
+      const shapes = new Set(stationArr.map(s => s.shapeType));
+      const others = Array.from(shapes).filter(s => s !== origin.shapeType);
+      if (others.length === 0) return;
+      targetShape = randChoice(others);
+      const passenger = new Passenger(targetShape);
+      origin.enqueue(passenger);
+      this.passengers.add(passenger);
+      origin.capacityVisible = Math.max(origin.capacityVisible, origin.queue.length);
+    }
+
+    ensureRoutes() {
+      this.lines.forEach(line => line.recomputeGeometry(this.stations));
+    }
+
+    pointerToWorld(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left),
+        y: (e.clientY - rect.top)
+      };
+    }
+
+    findNearestStation(point, radius = 40) {
+      let best = null;
+      let bestDist = radius;
+      this.stations.forEach(st => {
+        const d = distance(point, st.position);
+        if (d < bestDist) {
+          best = st;
+          bestDist = d;
+        }
+      });
+      return best;
+    }
+
+    onPointerDown(e) {
+      e.preventDefault();
+      this.canvas.setPointerCapture(e.pointerId);
+      const world = this.pointerToWorld(e);
+      const station = this.findNearestStation(world);
+      this.pointerState.down = true;
+      this.pointerState.start = world;
+      this.pointerState.current = world;
+      if (station) {
+        this.pointerState.stationStart = station;
+        let line = this.selectedLineId ? this.lines.get(this.selectedLineId) : null;
+        if (!line || !line.stations.includes(station.id)) {
+          line = Array.from(this.lines.values()).find(l => l.stations.includes(station.id)) || line;
+        }
+        if (!line || !line.stations.includes(station.id)) {
+          if (this.state.inventory.linesLeft <= 0) {
+            this.showTooltip(station.position, 'No lines available');
+            this.pointerState.lineId = null;
+            return;
+          }
+          const color = this.colorPalette[(this.lines.size) % this.colorPalette.length];
+          line = new Line(color);
+          line.stations = [station.id];
+          this.lines.set(line.id, line);
+          this.selectedLineId = line.id;
+          this.state.inventory.linesLeft--;
+          this.state.routeVersion++;
+          this.refreshLineList();
+        } else {
+          this.selectedLineId = line.id;
+        }
+        this.pointerState.lineId = line.id;
+        this.pointerState.creating = true;
+        const first = line.stations[0];
+        const last = line.stations[line.stations.length - 1];
+        this.pointerState.extendDir = (station.id === first && station.id !== last) ? 'start' : 'end';
+      } else {
+        this.pointerState.stationStart = null;
+        this.pointerState.lineId = null;
+      }
+    }
+
+    onPointerMove(e) {
+      const world = this.pointerToWorld(e);
+      this.pointerState.current = world;
+      this.hoverStation = this.findNearestStation(world, 30);
+      if (!this.pointerState.down || !this.pointerState.lineId) return;
+      const line = this.lines.get(this.pointerState.lineId);
+      if (!line) return;
+      const station = this.findNearestStation(world);
+      if (station && station !== this.pointerState.stationHover) {
+        this.pointerState.stationHover = station;
+      }
+    }
+
+    onPointerUp(e) {
+      this.canvas.releasePointerCapture(e.pointerId);
+      if (!this.pointerState.down) return;
+      this.pointerState.down = false;
+      const line = this.pointerState.lineId ? this.lines.get(this.pointerState.lineId) : null;
+      if (line && this.pointerState.stationStart) {
+        const target = this.findNearestStation(this.pointerState.current);
+        if (target && target.id !== this.pointerState.stationStart.id) {
+          const pendingType = this.pointerState.extendDir === 'start' ? 'prepend' : 'append';
+          const before = this.countTunnelsForIds(line.stations);
+          const after = this.countTunnelsForLine(line, { type: pendingType, stationId: target.id });
+          const diff = after - before;
+          if (diff > this.state.inventory.tunnels) {
+            this.showTooltip(target.position, 'Need a tunnel');
+          } else {
+            if (pendingType === 'prepend') {
+              line.stations.unshift(target.id);
+            } else {
+              line.stations.push(target.id);
+            }
+            if (diff > 0) {
+              this.state.inventory.tunnels -= diff;
+            } else if (diff < 0) {
+              this.state.inventory.tunnels += Math.abs(diff);
+            }
+            line.tunnels = after;
+            line.recomputeGeometry(this.stations);
+            this.state.routeVersion++;
+          }
+        }
+      }
+      this.pointerState.lineId = null;
+      this.pointerState.stationStart = null;
+      this.pointerState.stationHover = null;
+      this.pointerState.creating = false;
+    }
+
+    showTooltip(position, text) {
+      const tooltip = this.overlays.tooltip;
+      tooltip.textContent = text;
+      tooltip.style.left = `${position.x}px`;
+      tooltip.style.top = `${position.y}px`;
+      tooltip.classList.add('active');
+      clearTimeout(this.tooltipTimer);
+      this.tooltipTimer = setTimeout(() => tooltip.classList.remove('active'), 1500);
+    }
+
+    refreshLineList() {
+      const container = this.overlays.lineList;
+      container.innerHTML = '';
+      this.lines.forEach(line => {
+        const entry = document.createElement('div');
+        entry.className = 'line-entry';
+        const left = document.createElement('div');
+        left.style.display = 'flex';
+        left.style.alignItems = 'center';
+        const swatch = document.createElement('div');
+        swatch.className = 'swatch';
+        swatch.style.background = line.color;
+        left.appendChild(swatch);
+        const label = document.createElement('span');
+        label.textContent = `Line ${line.id.split('-')[1]}`;
+        left.appendChild(label);
+        entry.appendChild(left);
+        const btn = document.createElement('button');
+        btn.textContent = `+ Train (${line.trains.length})`;
+        btn.style.fontSize = '11px';
+        btn.addEventListener('click', () => {
+          if (this.state.inventory.locomotives > 0) {
+            const train = new Train(line.id);
+            train.currentStationIndex = 0;
+            train.nextStationIndex = Math.min(1, line.stations.length - 1);
+            this.trains.set(train.id, train);
+            line.trains.push(train.id);
+            this.state.inventory.locomotives--;
+            this.refreshLineList();
+          }
+        });
+        entry.addEventListener('click', () => {
+          this.selectedLineId = line.id;
+        });
+        entry.appendChild(btn);
+        container.appendChild(entry);
+      });
+    }
+
+    segmentCrossesRiver(a, b) {
+      const river = this.state.riverShape;
+      for (let i = 0; i < river.length - 1; i++) {
+        const r1 = river[i];
+        const r2 = river[i + 1];
+        if (linesIntersect(a, b, r1, r2)) return true;
+      }
+      return false;
+    }
+
+    countTunnelsForIds(ids) {
+      let total = 0;
+      for (let i = 0; i < ids.length - 1; i++) {
+        const a = this.stations.get(ids[i]);
+        const b = this.stations.get(ids[i + 1]);
+        if (!a || !b) continue;
+        if (this.segmentCrossesRiver(a.position, b.position)) total++;
+      }
+      return total;
+    }
+
+    countTunnelsForLine(line, pending) {
+      const ids = line.stations.slice();
+      if (pending) {
+        if (pending.type === 'append') ids.push(pending.stationId);
+        if (pending.type === 'prepend') ids.unshift(pending.stationId);
+      }
+      return this.countTunnelsForIds(ids);
+    }
+
+    spawnWeeklyUpgrade() {
+      const upgrades = [];
+      if (this.state.inventory.locomotives < 4) upgrades.push({ type: 'locomotive', label: '+ Locomotive' });
+      if (this.state.inventory.carriages < 3) upgrades.push({ type: 'carriage', label: '+ Carriage' });
+      upgrades.push({ type: 'tunnels', label: '+2 Tunnels' });
+      if (this.state.inventory.linesLeft < 5) upgrades.push({ type: 'line', label: '+ New Line' });
+      upgrades.push({ type: 'interchange', label: 'Interchange Upgrade' });
+      this.state.upgradesAvailable = this.shuffle(upgrades).slice(0, 3);
+      const panel = this.overlays.upgradePanel;
+      panel.innerHTML = '';
+      this.state.upgradesAvailable.forEach(upg => {
+        const btn = document.createElement('button');
+        btn.textContent = upg.label;
+        btn.addEventListener('click', () => {
+          this.applyUpgrade(upg.type);
+          panel.classList.remove('active');
+          this.togglePause(true);
+        });
+        panel.appendChild(btn);
+      });
+      panel.classList.add('active');
+      this.togglePause(false);
+    }
+
+    shuffle(arr) {
+      const copy = arr.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    applyUpgrade(type) {
+      switch (type) {
+        case 'locomotive': this.state.inventory.locomotives++; break;
+        case 'carriage': this.state.inventory.carriages++; this.trains.forEach(tr => tr.capacity += 2); break;
+        case 'tunnels': this.state.inventory.tunnels += 2; break;
+        case 'line': this.state.inventory.linesLeft++; break;
+        case 'interchange': this.state.inventory.interchanges++; this.upgradeRandomStation(); break;
+      }
+    }
+
+    upgradeRandomStation() {
+      const candidate = randChoice(Array.from(this.stations.values()));
+      if (candidate) candidate.isInterchange = true;
+    }
+
+    updateHUD() {
+      const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const dayIndex = Math.floor((this.state.daySeconds / 20) % 7);
+      this.overlays.hudScore.textContent = this.state.score;
+      this.overlays.hudClock.textContent = `Week ${this.state.week} · ${dayNames[dayIndex]}`;
+      this.overlays.hudInventory.textContent = `Lines: ${this.state.inventory.linesLeft} · Locos: ${this.state.inventory.locomotives} · Tunnels: ${this.state.inventory.tunnels}`;
+      if (this.debugEnabled) {
+        this.overlays.debugPanel.textContent = `FPS: ${this.fps.toFixed(1)}\nStations: ${this.stations.size}\nPassengers: ${this.passengers.size}\nTrains: ${this.trains.size}\nLines: ${this.lines.size}`;
+        this.overlays.debugPanel.classList.add('active');
+      } else {
+        this.overlays.debugPanel.classList.remove('active');
+      }
+    }
+
+    loop(timestamp) {
+      const dt = (timestamp - this.lastTimestamp) / 1000;
+      this.lastTimestamp = timestamp;
+      if (dt > 0) {
+        const currentFps = 1 / dt;
+        this.fps = this.fps ? this.fps * 0.9 + currentFps * 0.1 : currentFps;
+      }
+      this.accumulator += dt * this.speed;
+      let steps = 0;
+      const fixed = 1 / 60;
+      while (this.accumulator >= fixed && steps < 5) {
+        if (this.running) this.update(fixed);
+        this.accumulator -= fixed;
+        steps++;
+      }
+      this.render();
+      this.updateHUD();
+      requestAnimationFrame(this.loop.bind(this));
+    }
+
+    update(dt) {
+      this.state.time += dt;
+      this.state.daySeconds += dt * this.speed;
+      this.weeklyTimer += dt;
+      if (this.weeklyTimer >= 120) {
+        this.weeklyTimer = 0;
+        this.state.week++;
+        this.spawnWeeklyUpgrade();
+      }
+      this.lastSpawnStation += dt;
+      this.lastSpawnPassenger += dt;
+      const stationInterval = Math.max(10, 40 - this.state.week * 2);
+      const passengerInterval = Math.max(1, 4 - this.state.week * 0.15);
+      if (this.lastSpawnStation > stationInterval) {
+        this.spawnStation();
+        this.lastSpawnStation = 0;
+      }
+      if (this.lastSpawnPassenger > passengerInterval) {
+        this.spawnPassenger();
+        this.lastSpawnPassenger = 0;
+      }
+      this.updateStations(dt);
+      this.updateTrains(dt);
+      this.ensureRoutes();
+      this.saveTimer = (this.saveTimer || 0) + dt;
+      if (this.saveTimer > 5) {
+        this.saveTimer = 0;
+        this.saveState();
+      }
+    }
+
+    updateStations(dt) {
+      this.stations.forEach(station => {
+        const cap = station.getCapacity();
+        if (station.queue.length > cap) {
+          station.overcrowdTimer += dt;
+          if (station.overcrowdTimer > 10) {
+            this.gameOver(station);
+          }
+        } else {
+          station.overcrowdTimer = Math.max(0, station.overcrowdTimer - dt * 0.5);
+        }
+      });
+    }
+
+    computeRoutes() {
+      if (this.routeCacheVersion !== this.state.routeVersion) {
+        this.routeCache.clear();
+        this.routeCacheVersion = this.state.routeVersion;
+      }
+      const adjacency = new Map();
+      this.lines.forEach(line => {
+        for (let i = 0; i < line.stations.length - 1; i++) {
+          const a = line.stations[i];
+          const b = line.stations[i + 1];
+          if (!adjacency.has(a)) adjacency.set(a, []);
+          if (!adjacency.has(b)) adjacency.set(b, []);
+          adjacency.get(a).push(b);
+          adjacency.get(b).push(a);
+        }
+      });
+      const shapes = new Map();
+      this.stations.forEach(st => {
+        if (!shapes.has(st.shapeType)) shapes.set(st.shapeType, []);
+        shapes.get(st.shapeType).push(st.id);
+      });
+      const bfs = (startId, desiredShape) => {
+        const cacheKey = `${startId}|${desiredShape}`;
+        if (this.routeCache.has(cacheKey)) return this.routeCache.get(cacheKey);
+        const targets = new Set(shapes.get(desiredShape) || []);
+        if (!targets.size) {
+          this.routeCache.set(cacheKey, null);
+          return null;
+        }
+        const queue = [startId];
+        const parents = new Map();
+        parents.set(startId, null);
+        while (queue.length) {
+          const current = queue.shift();
+          if (current !== startId && targets.has(current)) {
+            const path = [];
+            let node = current;
+            while (node !== null) {
+              path.unshift(node);
+              node = parents.get(node);
+            }
+            this.routeCache.set(cacheKey, path);
+            return path;
+          }
+          const neighbors = adjacency.get(current) || [];
+          for (const next of neighbors) {
+            if (!parents.has(next)) {
+              parents.set(next, current);
+              queue.push(next);
+            }
+          }
+        }
+        this.routeCache.set(cacheKey, null);
+        return null;
+      };
+      return (originId, desiredShape) => bfs(originId, desiredShape);
+    }
+
+    updateTrains(dt) {
+      const resolver = this.computeRoutes();
+      this.lines.forEach(line => line.recomputeGeometry(this.stations));
+      this.trains.forEach(train => {
+        const line = this.lines.get(train.lineId);
+        if (!line || line.stations.length < 2) return;
+        if (train.justSpawned) {
+          this.arriveAtStation(train, line, resolver, true);
+          train.justSpawned = false;
+        }
+        if (train.dwellTimer > 0) {
+          train.dwellTimer -= dt;
+          if (train.dwellTimer <= 0) train.dwellTimer = 0;
+          return;
+        }
+        const fromIndex = train.currentStationIndex;
+        const toIndex = train.nextStationIndex;
+        if (toIndex == null || toIndex < 0 || toIndex >= line.stations.length) return;
+        const fromStation = this.stations.get(line.stations[fromIndex]);
+        const toStation = this.stations.get(line.stations[toIndex]);
+        if (!fromStation || !toStation) return;
+        const length = distance(fromStation.position, toStation.position);
+        if (length < 1) return;
+        train.progress += (train.speed * dt) / length;
+        if (train.progress >= 1) {
+          train.progress = 0;
+          train.currentStationIndex = toIndex;
+          this.arriveAtStation(train, line, resolver);
+        }
+      });
+    }
+
+    determineNextStationIndex(train, line) {
+      const count = line.stations.length;
+      if (count < 2) return null;
+      if (line.loop) {
+        const loopCount = count - 1;
+        if (loopCount <= 0) return null;
+        let next = (train.currentStationIndex + train.direction + loopCount) % loopCount;
+        if (next === train.currentStationIndex) next = (next + 1) % loopCount;
+        return next;
+      }
+      let next = train.currentStationIndex + train.direction;
+      if (next >= count || next < 0) {
+        train.direction *= -1;
+        next = train.currentStationIndex + train.direction;
+      }
+      return clamp(next, 0, count - 1);
+    }
+
+    arriveAtStation(train, line, resolver, initial = false) {
+      const stationId = line.stations[train.currentStationIndex];
+      const station = this.stations.get(stationId);
+      if (!station) return;
+      const delivered = [];
+      train.passengers = train.passengers.filter(psg => {
+        if (psg.desiredShape === station.shapeType) {
+          delivered.push(psg);
+          this.passengers.delete(psg);
+          return false;
+        }
+        return true;
+      });
+      if (delivered.length) {
+        this.state.score += delivered.length;
+        this.bestScore = Math.max(this.bestScore, this.state.score);
+        this.audio.playDing();
+      }
+      const nextIndex = this.determineNextStationIndex(train, line);
+      train.nextStationIndex = nextIndex;
+      const nextStationId = nextIndex != null ? line.stations[nextIndex] : null;
+      station.capacityVisible = Math.max(station.capacityVisible, station.queue.length);
+      if (nextStationId) {
+        for (let i = 0; i < station.queue.length && train.passengers.length < train.capacity;) {
+          const passenger = station.queue[i];
+          const route = resolver(station.id, passenger.desiredShape);
+          if (!route || route.length < 2) {
+            i++;
+            continue;
+          }
+          if (route[1] === nextStationId) {
+            station.queue.splice(i, 1);
+            train.passengers.push(passenger);
+          } else {
+            i++;
+          }
+        }
+      }
+      train.dwellTimer = (station.isInterchange ? 0.9 : 1.5) * (initial ? 0.8 : 1);
+    }
+
+    gameOver(station) {
+      this.running = false;
+      this.showModal('Overcrowding!', `A station overflowed. Score: ${this.state.score}. Best: ${this.bestScore}`, () => {
+        this.hideModal();
+        this.reset();
+      });
+    }
+
+    render() {
+      const ctx = this.ctx;
+      const width = this.canvas.width / (window.devicePixelRatio || 1);
+      const height = this.canvas.height / (window.devicePixelRatio || 1);
+      ctx.clearRect(0, 0, width, height);
+      this.drawRiver(ctx);
+      this.drawLines(ctx);
+      this.drawStations(ctx);
+      this.drawPassengers(ctx);
+      this.drawTrains(ctx);
+      if (this.pointerState.down && this.pointerState.creating) {
+        this.drawPreview(ctx);
+      }
+      this.drawSelection(ctx);
+    }
+
+    drawRiver(ctx) {
+      const points = this.state.riverShape;
+      ctx.save();
+      ctx.strokeStyle = '#98c1ff';
+      ctx.lineWidth = 26;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawLines(ctx) {
+      this.lines.forEach(line => {
+        if (line.stations.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = line.color;
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const first = this.stations.get(line.stations[0]).position;
+        ctx.moveTo(first.x, first.y);
+        for (let i = 1; i < line.stations.length; i++) {
+          const pos = this.stations.get(line.stations[i]).position;
+          ctx.lineTo(pos.x, pos.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    drawStations(ctx) {
+      this.stations.forEach(station => {
+        const pos = station.position;
+        const overflow = station.queue.length > station.getCapacity();
+        const size = station.isInterchange ? 18 : 14;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = overflow ? '#ff3b30' : '#333';
+        ctx.lineWidth = station.isInterchange ? 4 : 2;
+        drawShape(ctx, station.shapeType, size);
+        if (station.isInterchange) {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = overflow ? '#ff3b30' : '#333';
+          drawShape(ctx, station.shapeType, size + 6, false);
+        }
+        ctx.restore();
+      });
+    }
+
+    drawPassengers(ctx) {
+      this.stations.forEach(station => {
+        const pos = station.position;
+        const queue = station.queue;
+        const baseSize = 4;
+        queue.slice(0, 6).forEach((psg, idx) => {
+          const angle = (Math.PI * 2 * idx) / 6;
+          const x = pos.x + Math.cos(angle) * 18;
+          const y = pos.y + Math.sin(angle) * 18;
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.fillStyle = '#333';
+          ctx.strokeStyle = '#333';
+          drawShape(ctx, psg.desiredShape, baseSize, true);
+          ctx.restore();
+        });
+        if (queue.length > 6) {
+          ctx.save();
+          ctx.fillStyle = '#333';
+          ctx.font = '10px system-ui';
+          ctx.fillText(`+${queue.length - 6}`, pos.x + 20, pos.y + 3);
+          ctx.restore();
+        }
+      });
+    }
+
+    drawTrains(ctx) {
+      this.trains.forEach(train => {
+        const line = this.lines.get(train.lineId);
+        if (!line || line.stations.length < 2) return;
+        const fromStation = this.stations.get(line.stations[train.currentStationIndex]);
+        const toStation = train.nextStationIndex != null ? this.stations.get(line.stations[train.nextStationIndex]) : null;
+        if (!fromStation) return;
+        const from = fromStation.position;
+        const to = toStation ? toStation.position : from;
+        const t = clamp(train.progress, 0, 1);
+        const x = lerp(from.x, to.x, t);
+        const y = lerp(from.y, to.y, t);
+        let angle = Math.atan2(to.y - from.y, to.x - from.x);
+        if (!isFinite(angle)) angle = 0;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const width = 26;
+        const height = 10;
+        const radius = 5;
+        roundRect(ctx, -width/2, -height/2, width, height, radius);
+        ctx.fill();
+        ctx.stroke();
+        const pipSpacing = width / train.capacity;
+        ctx.fillStyle = line.color;
+        for (let i = 0; i < train.passengers.length; i++) {
+          ctx.beginPath();
+          ctx.arc(-width/2 + pipSpacing * (i + 0.5), 0, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+    }
+
+    drawPreview(ctx) {
+      if (!this.pointerState.stationStart) return;
+      const start = this.pointerState.stationStart.position;
+      const current = this.pointerState.current;
+      ctx.save();
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(current.x, current.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawSelection(ctx) {
+      if (!this.selectedLineId) return;
+      const line = this.lines.get(this.selectedLineId);
+      if (!line) return;
+      line.stations.forEach(stId => {
+        const st = this.stations.get(stId);
+        if (!st) return;
+        ctx.save();
+        ctx.fillStyle = line.color;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(st.position.x, st.position.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+  }
+
+  function linesIntersect(a, b, c, d) {
+    const orient = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    const o1 = orient(a, b, c);
+    const o2 = orient(a, b, d);
+    const o3 = orient(c, d, a);
+    const o4 = orient(c, d, b);
+    if (o1 === 0 && o2 === 0 && o3 === 0 && o4 === 0) return false;
+    return (o1 * o2 < 0) && (o3 * o4 < 0);
+  }
+
+  function drawShape(ctx, shape, size, filled = false) {
+    ctx.beginPath();
+    switch (shape) {
+      case 'circle':
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        break;
+      case 'triangle':
+        for (let i = 0; i < 3; i++) {
+          const angle = Math.PI / 2 + i * (Math.PI * 2 / 3);
+          const x = Math.cos(angle) * size;
+          const y = Math.sin(angle) * size;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+      case 'square':
+        ctx.rect(-size, -size, size * 2, size * 2);
+        break;
+      case 'diamond':
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size, 0);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size, 0);
+        ctx.closePath();
+        break;
+      case 'pentagon':
+        for (let i = 0; i < 5; i++) {
+          const angle = -Math.PI / 2 + i * (Math.PI * 2 / 5);
+          const x = Math.cos(angle) * size;
+          const y = Math.sin(angle) * size;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+      case 'star':
+        for (let i = 0; i < 10; i++) {
+          const angle = -Math.PI / 2 + i * (Math.PI / 5);
+          const r = i % 2 === 0 ? size : size * 0.5;
+          const x = Math.cos(angle) * r;
+          const y = Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+      default:
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        break;
+    }
+    if (filled) ctx.fill(); else ctx.stroke();
+  }
+
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  window.addEventListener('load', () => {
+    const canvas = document.getElementById('game');
+    new Game(canvas);
+  });
+})();
+</script>
+</body>
+</html>
